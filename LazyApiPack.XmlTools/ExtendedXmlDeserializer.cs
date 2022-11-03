@@ -228,9 +228,10 @@ namespace LazyApiPack.XmlTools {
         /// <returns>The deserialized array.</returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         private object? DeserializeArray(XElement objectNode, Type objectType, object createdOnConstruction) {
-            var rank = objectNode.Attribute(XName.Get("rankDescriptor"))?.Value;
+            var rank = objectNode.Attribute(XName.Get("rankDescriptor", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value;
+            
             if (rank == null) {
-                if (objectNode.Attribute(XName.Get("format"))?.Value == "Base64") {
+                if (objectNode.Attribute(XName.Get("format", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value == "Base64") {
                     return DeserializeBinary(objectNode);
                 } else {
                     throw new ExtendedXmlSerializationException($"Cannot deserialize array {objectNode.Name} of type {objectType.FullName} because no rank descriptor was found and no format descriptor to deserialize");
@@ -248,10 +249,10 @@ namespace LazyApiPack.XmlTools {
                 array = Array.CreateInstance(objectType.GetElementType(), length);
             }
 
-            var items = objectNode.Elements(XName.Get("Item"));
+            var items = objectNode.Elements(XName.Get("Item", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
             var descriptor = new SerializableArray(array);
             while (descriptor.MoveNext()) {
-                var node = items.FirstOrDefault(i => i.Attribute(XName.Get("index"))?.Value == descriptor.CurrentIndexString);
+                var node = items.FirstOrDefault(i => i.Attribute(XName.Get("index", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value == descriptor.CurrentIndexString);
                 if (node != null) {
                     // Nullable Properties are not serialized
                     descriptor.Current = DeserializeProperty(node, descriptor.ItemType, createdOnConstruction);
@@ -304,9 +305,9 @@ namespace LazyApiPack.XmlTools {
             var dictionary = Activator.CreateInstance(dictionaryType) as IDictionary ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {dictionaryType.FullName}.");
 
             foreach (var item in objectNode.Elements()) {
-                var keyElement = item.Element(XName.Get("Key")) ?? throw new ExtendedXmlSerializationException("Could not find Key element in xml.");
+                var keyElement = item.Element(XName.Get("Key", "http://www.jodiewatson.net/xml/lzyxmlx/1.0")) ?? throw new ExtendedXmlSerializationException("Could not find Key element in xml.");
                 var key = DeserializeProperty(keyElement, keyType, createdOnConstruction);
-                var valueElement = item.Element(XName.Get("Value")) ?? throw new ExtendedXmlSerializationException("Could not find Value element in xml.");
+                var valueElement = item.Element(XName.Get("Value", "http://www.jodiewatson.net/xml/lzyxmlx/1.0")) ?? throw new ExtendedXmlSerializationException("Could not find Value element in xml.");
                 var value = DeserializeProperty(valueElement, valueType, createdOnConstruction);
                 dictionary.Add(key, value);
             }

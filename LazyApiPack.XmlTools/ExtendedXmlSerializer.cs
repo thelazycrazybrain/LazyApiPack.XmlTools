@@ -184,7 +184,7 @@ namespace LazyApiPack.XmlTools
         private void SerializeBinary(XmlWriter writer, byte[] value, string propertyName, Action<XmlWriter>? writeAttributeToCurrentElement) {
             writer.WriteStartElement(propertyName);
             writeAttributeToCurrentElement?.Invoke(writer);
-            writer.WriteAttributeString("format", "Base64");
+            writer.WriteAttributeString("format", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", "Base64");
             writer.WriteValue(Convert.ToBase64String(value));
             writer.WriteEndElement();
         }
@@ -219,10 +219,13 @@ namespace LazyApiPack.XmlTools
                 rankDescriptor += array.GetLength(i) + ";";
             }
             rankDescriptor = rankDescriptor.TrimEnd(';');
-            writer.WriteAttributeString("rankDescriptor", rankDescriptor);
+            writer.WriteAttributeString("rankDescriptor", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", rankDescriptor);
             var arrayIterator = new SerializableArray(array);
             while (arrayIterator.MoveNext()) {
-                SerializeProperty(writer, propertyInfo, arrayIterator.Current, propertyInfo.ArrayPropertyItemName, arrayIterator.ItemType.Name, arrayIterator.ItemType, arrayIterator.ItemType.IsInterface || arrayIterator.ItemType.IsAbstract, (w) => writer.WriteAttributeString("index", arrayIterator.CurrentIndexString));
+                SerializeProperty(writer, propertyInfo, arrayIterator.Current, propertyInfo.ArrayPropertyItemName,
+                    arrayIterator.ItemType.Name, arrayIterator.ItemType, arrayIterator.ItemType.IsInterface || 
+                    arrayIterator.ItemType.IsAbstract, (w) => writer.WriteAttributeString("index",
+                        "http://www.jodiewatson.net/xml/lzyxmlx/1.0", arrayIterator.CurrentIndexString));
             }
             writer.WriteEndElement();
         }
@@ -279,10 +282,10 @@ namespace LazyApiPack.XmlTools
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
         private void SerializeDictionary(XmlWriter writer, IDictionary value, Type keyType, Type valueType, SerializablePropertyInfo propertyInfo, string propertyName, Type? equalityComparer, Action<XmlWriter>? writeAttributeToCurrentElement) {
             writer.WriteStartElement(propertyName);
-            writer.WriteAttributeString("keyType", keyType.FullName);
-            writer.WriteAttributeString("valueType", valueType.FullName);
+            writer.WriteAttributeString("keyType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", keyType.FullName);
+            writer.WriteAttributeString("valueType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", valueType.FullName);
             if (equalityComparer != null) {
-                writer.WriteAttributeString("comparerType", equalityComparer.FullName);
+                writer.WriteAttributeString("comparerType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", equalityComparer.FullName);
             }
 
             writeAttributeToCurrentElement?.Invoke(writer);

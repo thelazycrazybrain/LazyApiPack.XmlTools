@@ -4,7 +4,7 @@
     /// </summary>
     public interface IExtendedXmlSerializable {
         /// <summary>
-        /// Is called, when the class is being deserialized.
+        /// Is called, before the class is being deserialized.
         /// </summary>
         void OnDeserializing();
         /// <summary>
@@ -13,7 +13,7 @@
         /// <param name="success">True, if the deserialization was successful. If False, the class is in an invalid state.</param>
         void OnDeserialized(bool success);
         /// <summary>
-        /// Is called when the class is being serialized.
+        /// Is called before the class is being serialized.
         /// </summary>
         void OnSerializing();
         /// <summary>

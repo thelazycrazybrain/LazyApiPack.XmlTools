@@ -24,15 +24,15 @@ return;
 
 //return;
 
-//var qc1 = QuestionCatalog.Load("C:\\Temp\\questionaire.xml");
+//var qc1 = QuestionCatalog.Load("C:\\temp\\questionaire.xml");
 
 //return;
 
-var qc = new QuestionCatalog() { Name = "Penis" };
+var qc = new QuestionCatalog() { Name = "Qc 1" };
 var setn = new QuestionSet("This is hidden");
 qc.SetSingle(setn);
 
-var set1 = new QuestionSet("Standard random fragen...");
+var set1 = new QuestionSet("Standard random questions...");
 
 var set1q1 = new MultipleChoiceQuestion("How much wood would a woodchuck chuck, if a woodchuck could chuck wood?", "Specify the correct answer");
 set1q1.Answers.Add(new MultipleChoiceAnswer("None", false));
@@ -42,27 +42,27 @@ set1.Questions.Add(set1q1);
 
 
 var set1q2 = new VocabularyQuestion("What does 'in front of' mean in latin?", null);
-set1q2.Answers.Add(new VocabularyAnswer("ventral", false)); // not case sensitive
-set1q2.Answers.Add(new VocabularyAnswer("ventr.", false)); // not case sensitive, alternative
+set1q2.Answers.Add(new VocabularyAnswer("ventral", false));
+set1q2.Answers.Add(new VocabularyAnswer("ventr.", false));
 set1.Questions.Add(set1q2);
 
 
-var set1q3 = new PictureQuestion("Fill in the texts in the given image", "Do somethign...") {
+var set1q3 = new PictureQuestion("Fill in the texts in the given image", "Do something...") {
     ImageData = File.ReadAllBytes(@"F:\Pictures\Wallpapers\uwp2465872.jpeg"),
-    Mode = PictureQuestionMode.EnterText // The user uses textboxes | Alternative: MoveLabels
+    Mode = PictureQuestionMode.EnterText
 };
-// Text that is shown (or expected), case sensitive, location of label, size of label, alternative answers (if in text mode)
-set1q3.Answers.Add(new PictureAnswer("Sternum", false, new Point(0, 0), new Size(50, 10), new PictureAlternativeAnswer("os sternalis", false), new PictureAlternativeAnswer("i dont know...", false))); // not case sensitive, alternative answers like vocabulary answers
-set1q3.Answers.Add(new PictureAnswer("Musculus Brachialis", false, new Point(0, 50), new Size(50, 10), new PictureAlternativeAnswer("M. brachialis"))); // not case sensitive, alternative answers, only the "Picture answer" is used, if the question is in MoveLabels
+
+set1q3.Answers.Add(new PictureAnswer("Sternum", false, new Point(0, 0), new Size(50, 10), new PictureAlternativeAnswer("os sternalis", false), new PictureAlternativeAnswer("i dont know...", false)));
+set1q3.Answers.Add(new PictureAnswer("Musculus Brachialis", false, new Point(0, 50), new Size(50, 10), new PictureAlternativeAnswer("M. brachialis")));
 set1.Questions.Add(set1q3);
 
 var set1q4 = new PictureQuestion("Fill in the texts in the given image", null) {
-    ImageData = File.ReadAllBytes(@"F:\Pictures\Wallpapers\samurai.jpg"),
-    Mode = PictureQuestionMode.MoveLabels // The user uses textboxes | Alternative: MoveLabels
+    ImageData = File.ReadAllBytes(@"C:\temp\image.jpg"),
+    Mode = PictureQuestionMode.MoveLabels
 };
-// Text that is shown (or expected), case sensitive, location of label, size of label, alternative answers (if in text mode)
-set1q4.Answers.Add(new PictureAnswer("Sternum", false, new Point(0, 0), new Size(50, 10), new PictureAlternativeAnswer("os sternalis", false), new PictureAlternativeAnswer("i dont know...", false))); // not case sensitive, alternative answers like vocabulary answers
-set1q4.Answers.Add(new PictureAnswer("Musculus Brachialis", false, new Point(0, 50), new Size(50, 10), new PictureAlternativeAnswer("M. brachialis"))); // not case sensitive, alternative answers, only the "Picture answer" is used, if the question is in MoveLabels
+
+set1q4.Answers.Add(new PictureAnswer("Sternum", false, new Point(0, 0), new Size(50, 10), new PictureAlternativeAnswer("os sternalis", false), new PictureAlternativeAnswer("i dont know...", false)));
+set1q4.Answers.Add(new PictureAnswer("Musculus Brachialis", false, new Point(0, 50), new Size(50, 10), new PictureAlternativeAnswer("M. brachialis")));
 set1.Questions.Add(set1q4);
 
 qc.Sets.Add(set1);

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>The Lazy Crazy Brain Api Pack - Xml Tools</Title>
+    <Description>Provides extended Xml functionality (eg. serializing and deserializing Interface properties, Complex Data Types etc.)</Description>
+    <Authors>Jodie Watson</Authors>
+    <Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
+    <AssemblyVersion>1.0.6</AssemblyVersion>
+    <PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
+    <FileVersion>1.0.6</FileVersion>
+    <Version>$(AssemblyVersion)</Version>
+  </PropertyGroup>
+
+</Project>

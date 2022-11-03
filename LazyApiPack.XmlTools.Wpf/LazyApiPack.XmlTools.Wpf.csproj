@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<Title>The Lazy Crazy Brain Api Pack - Xml Tools</Title>
+		<Description>Adds support for WPF data types to the Extended Xml serializer </Description>
+		<Authors>Jodie Watson</Authors>
+		<Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
+		<AssemblyVersion>1.0.6</AssemblyVersion>
+		<PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
+		<FileVersion>1.0.6</FileVersion>
+		<Version>$(AssemblyVersion)</Version>
+
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\LazyApiPack.XmlTools\LazyApiPack.XmlTools.csproj" />
+	</ItemGroup>
+
+</Project>

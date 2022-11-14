@@ -103,7 +103,7 @@ namespace LazyApiPack.XmlTools {
                 if (_overwrittenAssemblyVersion != null) {
                     return _overwrittenAssemblyVersion;
                 } else {
-                    return _callingAssemblyVersion;
+                    return _callingAssemblyVersion ?? throw new NullReferenceException("Version can not be determined because the EntryAssembly version and the overwritten Assembly version are null.");
                 }
             }
             set
@@ -115,7 +115,7 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// Assembly name of the program (for compatibility checks)
         /// </summary>
-        public string AssemblyName
+        public string? AssemblyName
         {
             get
             {
@@ -134,19 +134,19 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// If version is overwritten, this version will be used instead of the Assembly Version.
         /// </summary>
-        Version _overwrittenAssemblyVersion = null;
+        Version? _overwrittenAssemblyVersion = null;
         /// <summary>
         /// Version of the calling assembly.
         /// </summary>
-        Version _callingAssemblyVersion = Assembly.GetEntryAssembly().GetName().Version;
+        Version? _callingAssemblyVersion = Assembly.GetEntryAssembly()?.GetName().Version;
         /// <summary>
         /// If name is overwritten, this assembly name will be used instead of Assembly Name.
         /// </summary>
-        string _overwrittenAssemblyName = null;
+        string? _overwrittenAssemblyName = null;
         /// <summary>
         /// Title of the assembly.
         /// </summary>
-        string _callingAssemblyName = Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title;
+        string? _callingAssemblyName = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyTitleAttribute>()?.Title;
         /// <summary>
         /// Contains a cache of the classes that have been already serialized (to support xml compression and recursive serialization.
         /// </summary>
@@ -262,11 +262,12 @@ namespace LazyApiPack.XmlTools {
         /// <exception cref="ExtendedXmlFileException">Is thrown, if the header is in an invalid format.</exception>
         private ExtendedXmlHeader? GetHeader([NotNull] XElement headerElement) {
             try {
-                var header = new ExtendedXmlHeader();
-                header.AssemblyName = headerElement.Attribute(XName.Get("AssemblyName"))?.Value ?? throw new NullReferenceException("AssemblyName missing in xml.");
-                header.AssemblyVersion = Version.Parse(headerElement.Attribute(XName.Get("AssemblyVersion"))?.Value ?? throw new NullReferenceException("AssemblyVersion missing in xml."));
-                header.CreationTimeStamp = ParseFormattedDateTime(headerElement.Attribute(XName.Get("CreationTimeStamp"))?.Value);
-                return header;
+                return new ExtendedXmlHeader(
+                                headerElement.Attribute(XName.Get("AssemblyName"))?.Value
+                                                                        ?? throw new NullReferenceException("AssemblyName missing in xml."),
+                                Version.Parse(headerElement.Attribute(XName.Get("AssemblyVersion"))?.Value
+                                                                        ?? throw new NullReferenceException("AssemblyVersion missing in xml.")),
+                                ParseFormattedDateTime(headerElement.Attribute(XName.Get("CreationTimeStamp"))?.Value));
             } catch {
                 throw new ExtendedXmlFileException("Invalid Header Format");
             }

@@ -15,15 +15,15 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// Is raised if the file version is lower than the application version.
         /// </summary>
-        public event FileVersionMismatchDelegate<T> UpgradeFileVersion;
+        public event FileVersionMismatchDelegate<T>? UpgradeFileVersion;
         /// <summary>
         /// Is raised if the file version is higher than the application version.
         /// </summary>
-        public event FileVersionMismatchDelegate<T> DowngradeFileVersion;
+        public event FileVersionMismatchDelegate<T>? DowngradeFileVersion;
         /// <summary>
         /// Is raised, if a property in the xml is not found in the target class.
         /// </summary>
-        public event UnresolvedPropertyDelegate<T> PropertyNotFound;
+        public event UnresolvedPropertyDelegate<T>? PropertyNotFound;
 
         /// <summary>
         /// Deserializes an xml file to an object.
@@ -100,10 +100,11 @@ namespace LazyApiPack.XmlTools {
         private object DeserializeClass(XElement objectNode, Type objectType) {
             string? id = null;
             if (!SuppressId) {
-                id = objectNode.Attribute(XName.Get("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value;
+                id = objectNode.Attribute(XName.Get("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value 
+                    ?? throw new NullReferenceException($"Id of {objectType.FullName} can not be null because id suppression is not activated.");
+                
                 if (objectType.IsAbstract || objectType.IsInterface) {
                     var attType = objectNode.Attributes().First(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
-
                     objectType = GetCachedType(attType.Value, objectType.Namespace);
                 }
             }
@@ -111,14 +112,14 @@ namespace LazyApiPack.XmlTools {
             var deserializedClass = _deserializedObjects.FirstOrDefault(c => c.Type == objectType.FullName && c.Id == id);
             if (deserializedClass != null) return deserializedClass.Object;
 
-            var instance = Activator.CreateInstance(objectType);
+            var instance = Activator.CreateInstance(objectType) ?? throw new NullReferenceException($"Can not create instance of {objectType.FullName}.");
             if (!SuppressId) {
                 _deserializedObjects.Add(new SerializedClassContainer(id, objectType.FullName ?? objectType.Name, instance));
 
                 // Set Key Property
                 var keyProperty = objectType.GetProperties().FirstOrDefault(p => p.GetCustomAttribute<XmlClassKeyAttribute>() != null);
                 if (keyProperty != null) {
-                    if (!SerializationHelper.TryDeserializeValueType(keyProperty.PropertyType, id, out object key, CultureInfo, DateTimeFormat)) {
+                    if (!SerializationHelper.TryDeserializeValueType(keyProperty.PropertyType, id, out var key, CultureInfo, DateTimeFormat)) {
                         throw new ExtendedXmlSerializationException("Cannot deserialize key property.");
                     } else {
                         keyProperty.SetValue(instance, key);
@@ -174,7 +175,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="createdOnConstruction"></param>
         /// <returns></returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private object DeserializeProperty(XElement objectNode, Type objectType, object createdOnConstruction) {
+        private object? DeserializeProperty(XElement objectNode, Type objectType, object? createdOnConstruction) {
             if (objectType.IsArray) {
                 return DeserializeArray(objectNode, objectType, createdOnConstruction);
             } else if (objectType.IsGenericType) {
@@ -184,7 +185,7 @@ namespace LazyApiPack.XmlTools {
             } else if (IsValueType(objectType)) {
                 return DeserializeValueType(objectNode, objectType);
             } else {
-                if (TryDeserializeComplexClass(objectNode, objectType, out object complex)) {
+                if (TryDeserializeComplexClass(objectNode, objectType, out object? complex)) {
                     return complex;
                 } else {
                     throw new ExtendedXmlSerializationException("The type {type.FullName} could not be deserialized and there were no events overloaded to deserialize it.");
@@ -213,8 +214,9 @@ namespace LazyApiPack.XmlTools {
         /// <param name="objectNode">The xml node representing the object.</param>
         /// <param name="objectType">The type of the enum.</param>
         /// <returns>The deserialized enum or the default value.</returns>
-        private object? DeserializeEnum(XElement objectNode, Type objectType) {
-            if (string.IsNullOrWhiteSpace(objectNode.Value)) return Activator.CreateInstance(objectType);
+        private object DeserializeEnum(XElement objectNode, Type objectType) {
+            if (string.IsNullOrWhiteSpace(objectNode.Value)) 
+                return Activator.CreateInstance(objectType) ?? throw new NullReferenceException($"Can not create instance of {objectType.FullName}.");
             return Enum.Parse(objectType, objectNode.Value);
 
         }
@@ -227,7 +229,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="createdOnConstruction">If true, the array was created by the target class and the function does not need to create its own instance of the array (only fills it with data).</param>
         /// <returns>The deserialized array.</returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private object? DeserializeArray(XElement objectNode, Type objectType, object createdOnConstruction) {
+        private object? DeserializeArray(XElement objectNode, Type objectType, object? createdOnConstruction) {
             var rank = objectNode.Attribute(XName.Get("rankDescriptor", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value;
             
             if (rank == null) {
@@ -242,11 +244,11 @@ namespace LazyApiPack.XmlTools {
                 // Multidimensional
                 var lenghtsStr = rank.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
                 var lengths = lenghtsStr.Select(s => int.Parse(s)).ToArray();
-                array = Array.CreateInstance(objectType.GetElementType(), lengths);
+                array = Array.CreateInstance(objectType.GetElementType() ?? throw new NullReferenceException($"Element type of array {objectType.FullName} is null."), lengths);
             } else {
                 // Single dimensional
                 var length = int.Parse(rank);
-                array = Array.CreateInstance(objectType.GetElementType(), length);
+                array = Array.CreateInstance(objectType.GetElementType() ?? throw new NullReferenceException($"Element type of array {objectType.FullName} is null."), length);
             }
 
             var items = objectNode.Elements(XName.Get("Item", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
@@ -272,7 +274,7 @@ namespace LazyApiPack.XmlTools {
         /// <exception cref="ExtendedXmlSerializationException">If the generic type is not supported.</exception>
         /// <remarks>Supported Generics: Nullable, IList, Dictionary</remarks>
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
-        private object DeserializeGeneric(XElement objectNode, Type objectType, object createdOnConstruction) {
+        private object? DeserializeGeneric(XElement objectNode, Type objectType, object? createdOnConstruction) {
             var typedef = objectType.GetGenericTypeDefinition();
             var typeargs = objectType.GetGenericArguments();
 
@@ -284,7 +286,7 @@ namespace LazyApiPack.XmlTools {
             } else if (typedef == typeof(Dictionary<,>)) {
                 return DeserializeDictionary(objectNode, objectType, typeargs[0], typeargs[1], createdOnConstruction);
             } else {
-                if (TryDeserializePropertyExternal(objectNode.Value, objectType, out object deserialized)) {
+                if (TryDeserializePropertyExternal(objectNode.Value, objectType, out var deserialized)) {
                     return deserialized;
                 }
                 throw new ExtendedXmlSerializationException($"The generic type {typedef.FullName} is not supported.");
@@ -301,7 +303,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="createdOnConstruction">If true, the array was created by the target class and the function does not need to create its own instance of the array (only fills it with data).</param>
         /// <returns>The deserialized dictionary.</returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private object DeserializeDictionary(XElement objectNode, Type dictionaryType, Type keyType, Type valueType, object createdOnConstruction) {
+        private object DeserializeDictionary(XElement objectNode, Type dictionaryType, Type keyType, Type valueType, object? createdOnConstruction) {
             var dictionary = Activator.CreateInstance(dictionaryType) as IDictionary ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {dictionaryType.FullName}.");
 
             foreach (var item in objectNode.Elements()) {
@@ -323,7 +325,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="createdOnConstruction">If true, the array was created by the target class and the function does not need to create its own instance of the array (only fills it with data).</param>
         /// <returns>The deserialized list.</returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private object DeserializeList(XElement objectNode, Type listType, Type itemType, object createdOnConstruction) {
+        private object DeserializeList(XElement objectNode, Type listType, Type itemType, object? createdOnConstruction) {
             if (listType.GetGenericTypeDefinition() == typeof(ReadOnlyCollection<>)) {
                 var tempListType = typeof(List<>).MakeGenericType(itemType);
                 var tempList = Activator.CreateInstance(tempListType) as IList ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {tempListType.FullName}.");
@@ -358,16 +360,17 @@ namespace LazyApiPack.XmlTools {
         /// <param name="objectType">The type of the value type.</param>
         /// <returns>The deserialized value.</returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private object DeserializeValueType(XElement objectNode, Type objectType) {
-            if (!SerializationHelper.TryDeserializeValueType(objectType, objectNode.Value, out object value, CultureInfo, DateTimeFormat)) {
-                // Enums with datatype "int" etc.
-                if (TryDeserializeComplexClass(objectNode, objectType, out value)) {
-                    return value;
-                } else {
-                    throw new ExtendedXmlSerializationException("Cannot deserialize value.");
-                }
+        private object? DeserializeValueType(XElement objectNode, Type objectType) {
+            if (SerializationHelper.TryDeserializeValueType(objectType, objectNode.Value, out object? value, CultureInfo, DateTimeFormat)) {
+                return value;
             }
-            return value;
+
+            // Enums with datatype "int" etc.
+            if (TryDeserializeComplexClass(objectNode, objectType, out value)) {
+                return value;
+            } else {
+                throw new ExtendedXmlSerializationException("Cannot deserialize value.");
+            }
 
         }
 
@@ -378,7 +381,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="objectType">The type of the class.</param>
         /// <param name="deserialized">The object that has been deserialized.</param>
         /// <returns>True, if the class could be deserialized. Otherwise false.</returns>
-        private bool TryDeserializeComplexClass(XElement objectNode, Type objectType, out object deserialized) {
+        private bool TryDeserializeComplexClass(XElement objectNode, Type objectType, out object? deserialized) {
             var attType = objectNode.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
 
             if (attType != null) {
@@ -402,7 +405,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="objectType">The type of the class.</param>
         /// <param name="deserialized">The object that has been deserialized.</param>
         /// <returns>True, if the class could be deserialized or false, if the deserialization failed or no suitable extension was found.</returns>
-        private bool TryDeserializePropertyExternal(string value, Type objectType, out object deserialized) {
+        private bool TryDeserializePropertyExternal(string value, Type objectType, out object? deserialized) {
             var deserializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(objectType));
             if (deserializer != null) {
                 deserialized = deserializer.Deserialize(value, objectType, CultureInfo, DateTimeFormat, SuppressId);

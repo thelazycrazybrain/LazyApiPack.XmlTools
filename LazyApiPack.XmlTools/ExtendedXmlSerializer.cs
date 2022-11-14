@@ -12,8 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml;
 
-namespace LazyApiPack.XmlTools
-{
+namespace LazyApiPack.XmlTools {
     /// <summary>
     /// Serializes and deserializes classes to xml
     /// </summary>
@@ -53,11 +52,7 @@ namespace LazyApiPack.XmlTools
                         writer.WriteAttributeString("xmlns", "lzyxmlx", null, "http://www.jodiewatson.net/xml/lzyxmlx/1.0");
 
 
-                        var header = new ExtendedXmlHeader() {
-                            AssemblyName = AssemblyName,
-                            AssemblyVersion = AssemblyVersion,
-                            CreationTimeStamp = DateTime.Now
-                        };
+                        var header = new ExtendedXmlHeader(AssemblyName, AssemblyVersion, DateTime.Now);
 
                         WriteHeader(header, writer);
                         var clsInfo = new SerializableClassInfo(sourceClass, CultureInfo, DateTimeFormat, null, SuppressId);
@@ -92,7 +87,7 @@ namespace LazyApiPack.XmlTools
         /// <param name="propertyName">The name of the Xml Element. Null if the class is the root class of the xml.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private void SerializeClass(XmlWriter writer, SerializableClassInfo classInfo, bool isAbstractOrInterface, 
+        private void SerializeClass(XmlWriter writer, SerializableClassInfo classInfo, bool isAbstractOrInterface,
                                     string? propertyName = null, Action<XmlWriter>? writeAttributeToCurrentElement = null) {
             if (classInfo.Object == null) return;
             writer.WriteStartElement(string.IsNullOrWhiteSpace(propertyName) ? classInfo.ClassName : propertyName);
@@ -131,7 +126,7 @@ namespace LazyApiPack.XmlTools
 
         }
 
-      
+
         /// <summary>
         /// Serializes a property.
         /// </summary>
@@ -144,8 +139,8 @@ namespace LazyApiPack.XmlTools
         /// <param name="isAbstractOrInterface">If the class is abstract or an interface, the clsType attribute is set to make the object deserializable.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
-        private void SerializeProperty(XmlWriter writer, SerializablePropertyInfo propertyInfo, object? value, 
-                                       string propertyName, string propertyTypeName, Type propertyType, 
+        private void SerializeProperty(XmlWriter writer, SerializablePropertyInfo propertyInfo, object? value,
+                                       string propertyName, string propertyTypeName, Type propertyType,
                                        bool isAbstractOrInterface, Action<XmlWriter>? writeAttributeToCurrentElement) {
             if (value == null) return; // Do not serialize null values
 
@@ -223,7 +218,7 @@ namespace LazyApiPack.XmlTools
             var arrayIterator = new SerializableArray(array);
             while (arrayIterator.MoveNext()) {
                 SerializeProperty(writer, propertyInfo, arrayIterator.Current, propertyInfo.ArrayPropertyItemName,
-                    arrayIterator.ItemType.Name, arrayIterator.ItemType, arrayIterator.ItemType.IsInterface || 
+                    arrayIterator.ItemType.Name, arrayIterator.ItemType, arrayIterator.ItemType.IsInterface ||
                     arrayIterator.ItemType.IsAbstract, (w) => writer.WriteAttributeString("index",
                         "http://www.jodiewatson.net/xml/lzyxmlx/1.0", arrayIterator.CurrentIndexString));
             }

@@ -23,7 +23,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="dateTimeFormat">The dateTime format that the current serializer uses.</param>
         /// <param name="suppressId">If true, the serializer does not use Ids (Recursive serialization not possible).</param>
         /// <returns>The deserialized object of value.</returns>
-        object? Deserialize(string? value, Type type, IFormatProvider format, string dateTimeFormat, bool suppressId);
+        object? Deserialize(string? value, Type type, IFormatProvider format, string? dateTimeFormat, bool suppressId);
         /// <summary>
         /// Serializes the object to xml
         /// </summary>
@@ -37,6 +37,6 @@ namespace LazyApiPack.XmlTools {
         /// <remarks>use writer.WriteValue serializeAsAttribute is True. Otherwise the writer is in ElementStart position.</remarks>
         /// <remarks>Do not close the current node yourself</remarks>
         /// <remarks>If serializeAsAttribute is False, you can create as many subnodes as you want.</remarks>
-        bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string dateTimeFormat, bool suppressId);
+        bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string? dateTimeFormat, bool suppressId);
     }
 }

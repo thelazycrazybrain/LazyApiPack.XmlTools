@@ -1,18 +1,3 @@
-# About this project
-This Serializer is designed to make xml serialization easier with excessive type support.
-It can serialize properties with abstract or interface types, generics etc.
-The serializer also supports recursive object serialization. If an object has already been serialized, the element value in the xml is only a reference to the object serialized in the document above.
-
-This project was originally designed as a bodge, but grew over time into something that I can share online.
-It is not fully tested and I don't give any guarantee that it works in any case.
-
-# Contribute
-If you want to fix bugs or extend it, feel free to contribute.
-
-# TODO:
-Use the lzyxmlx namespace for Array Indexer attributes and Dictionary Key and Value attributes.
-Test the Migration functionality.
-Performace improvements (if needed).
 
 # Serialization and Deserialization
 If you have a class decorated with the XmlClassAttribute, the Serializer can serialize and deserialize the object.

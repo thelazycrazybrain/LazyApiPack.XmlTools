@@ -262,6 +262,14 @@ namespace LazyApiPack.XmlTools {
             }
         }
 
+        /// <summary>
+        /// Gets the full or relative name of the type.
+        /// </summary>
+        /// <param name="type">Type to determine the name.</param>
+        /// <returns>Full or relative name of type</returns>
+        string? GetTypeName(Type type) {
+            return UseFullNamespace ? type.FullName : type.Name;
+        }
         #endregion
 
     }

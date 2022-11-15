@@ -86,5 +86,9 @@ namespace LazyApiPack.XmlTools.Helpers {
         /// </summary>
         public bool IsXmlAttribute { get; }
 
+        public override string ToString() {
+            return $"{PropertyName}: {PropertyType.FullName ?? PropertyType.Name}";
+        }
+
     }
 }

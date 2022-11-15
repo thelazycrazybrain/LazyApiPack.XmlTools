@@ -16,7 +16,7 @@ Performace improvements (if needed).
 
 # Serialization and Deserialization
 If you have a class decorated with the XmlClassAttribute, the Serializer can serialize and deserialize the object.
-This serializer supports recursive serialization (Can be deactivated with the suppressId flag). It caches all serialized classes with an Id (Either ObjectHash or a property marked with the SerializableKeyAttribute).
+This serializer supports recursive serialization (Can be deactivated with the enableRecursiveSerialization flag). It caches all serialized classes with an Id (Either ObjectHash or a property marked with the SerializableKeyAttribute).
 If the serializer comes across an object that has already been serialized, it only writes a reference to this object in the xml document.
 
 Interface and abstract type serialization is also supported. The serializer writes the Type-FullName or Name to the xml.
@@ -170,11 +170,11 @@ To extend the XmlSerializer, you can create a class that implements the IExernal
 - bool SupportsType(Type type)
 	Is called from the serializer to check, if the class supports to deserialize / serialize this type
 
-- object? Deserialize(string? value, Type type, IFormatProvider format, string dateTimeFormat, bool suppressId);
+- object? Deserialize(string? value, Type type, IFormatProvider format, string dateTimeFormat, bool enableRecursiveSerialization);
 	Is called from the serializer when the type (that is checked against SupportsType) needs to be deserialized.
 	Value is the string (or xml) representation of the object that needs to be deserialized.
 
-- bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string dateTimeFormat, bool suppressId);
+- bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string dateTimeFormat, bool enableRecursiveSerialization);
 	Is called from the serializer when the type (that is checked against SupportsType) needs to be serialized.
 	The writer is either in the WriteStartElement() or WriteAttributeStart() state at this point (Depending whether serializeAsAttribute is True or not)
 	Use writer.WriteValue() to write the serialized content to the xml.
@@ -185,7 +185,7 @@ To extend the XmlSerializer, you can create a class that implements the IExernal
 ### Example
 ```csharp
 public class WindowsThicknessSerializer : IExternalObjectSerializer {
-	public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string dateTimeFormat, bool suppressId) {
+	public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string dateTimeFormat, bool enableRecursiveSerialization) {
 		if (value == null) {
 			writer.WriteValue(null);
 		} else {
@@ -195,7 +195,7 @@ public class WindowsThicknessSerializer : IExternalObjectSerializer {
 		return true;
 	}
 
-	public object? Deserialize(string? value, Type type, IFormatProvider format, string dateTimeFormat, bool suppressId) {
+	public object? Deserialize(string? value, Type type, IFormatProvider format, string dateTimeFormat, bool enableRecursiveSerialization) {
 		if (string.IsNullOrWhiteSpace(value)) return default(Thickness);
 
 		var s = value.Split(",");

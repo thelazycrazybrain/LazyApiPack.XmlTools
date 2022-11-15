@@ -52,12 +52,16 @@ namespace LazyApiPack.XmlTools {
                         writer.WriteAttributeString("xmlns", "lzyxmlx", null, "http://www.jodiewatson.net/xml/lzyxmlx/1.0");
 
 
-                        var header = new ExtendedXmlHeader(AssemblyName, AssemblyVersion, DateTime.Now);
+                        var header = new ExtendedXmlHeader(AppName, AppVersion);
 
                         WriteHeader(header, writer);
-                        var clsInfo = new SerializableClassInfo(sourceClass, CultureInfo, DateTimeFormat, null, SuppressId);
+                        var clsInfo = new SerializableClassInfo(
+                                                sourceClass, CultureInfo,
+                                                DateTimeFormat, null,
+                                                EnableRecursiveSerialization);
                         if (clsInfo.SerializableClassAttribute == null) {
-                            throw new ExtendedXmlSerializationException($"Cannot serialize the class {sourceClass.GetType().FullName}. It does not specify the SerializableClass Attribute.");
+                            throw new ExtendedXmlSerializationException(
+                                $"Cannot serialize the class {sourceClass.GetType().FullName}. It does not specify the SerializableClass Attribute.");
                         }
                         SerializeClass(writer, clsInfo, false);
 
@@ -91,7 +95,7 @@ namespace LazyApiPack.XmlTools {
                                     string? propertyName = null, Action<XmlWriter>? writeAttributeToCurrentElement = null) {
             if (classInfo.Object == null) return;
             writer.WriteStartElement(string.IsNullOrWhiteSpace(propertyName) ? classInfo.ClassName : propertyName);
-            if (!SuppressId) {
+            if (EnableRecursiveSerialization) {
                 writer.WriteAttributeString("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", classInfo.Id);
             }
             if (isAbstractOrInterface) {
@@ -99,7 +103,8 @@ namespace LazyApiPack.XmlTools {
             }
 
             writeAttributeToCurrentElement?.Invoke(writer);
-            if (!SuppressId) {
+
+            if (EnableRecursiveSerialization) {
                 if (_serializedObjects.Any(c => c.Id == classInfo.Id && c.ClassType.FullName == classInfo.ClassType.FullName)) {
                     // This class was already serialized
                     writer.WriteEndElement();
@@ -159,7 +164,7 @@ namespace LazyApiPack.XmlTools {
                 SerializeValueType(writer, value, propertyInfo, propertyName, writeAttributeToCurrentElement);
             } else {
                 // Is Class
-                var propCi = new SerializableClassInfo(value, CultureInfo, DateTimeFormat, null, SuppressId);
+                var propCi = new SerializableClassInfo(value, CultureInfo, DateTimeFormat, null, EnableRecursiveSerialization);
                 if (propCi.SerializableClassAttribute != null) {
                     SerializeClass(writer, propCi, isAbstractOrInterface, propertyName);
                 } else {
@@ -246,14 +251,18 @@ namespace LazyApiPack.XmlTools {
                 propertyType = typeArgs[0];
                 propertyTypeName = propertyType.Name;
                 SerializeProperty(writer, propertyInfo, value, propertyName, propertyTypeName, propertyType, propertyType.IsInterface || propertyType.IsAbstract, writeAttributeToCurrentElement);
-            } else if (typeof(IList).IsAssignableFrom(typedef)) {
-                propertyType = typeArgs[0];
-                propertyTypeName = propertyType.Name;
-                SerializeListProperty(writer, (IList)value, propertyInfo, propertyName, propertyTypeName, propertyType, propertyType.IsInterface || propertyType.IsAbstract, writeAttributeToCurrentElement);
             } else if (typedef == typeof(Dictionary<,>)) {
                 var att = propertyType.GetCustomAttribute<DictionaryEqualityComparerAttribute>();
                 var comparerType = att?.EqualityComparerType;
                 SerializeDictionary(writer, (IDictionary)value, typeArgs[0], typeArgs[1], propertyInfo, propertyName, comparerType, writeAttributeToCurrentElement);
+            } else if (typeof(IList).IsAssignableFrom(typedef) ||
+                       typeof(IList<>).IsAssignableFrom(typedef) ||
+                       typeof(ICollection).IsAssignableFrom(typedef) ||
+                       typeof(ICollection<>).IsAssignableFrom(typedef)) {
+                propertyType = typeArgs[0];
+                propertyTypeName = propertyType.Name;
+                SerializeListProperty(writer, (IList)value, propertyInfo, propertyName, propertyTypeName, propertyType, propertyType.IsInterface || propertyType.IsAbstract, writeAttributeToCurrentElement);
+
             } else {
                 if (Debugger.IsAttached) {
                     Debugger.Break();
@@ -335,7 +344,7 @@ namespace LazyApiPack.XmlTools {
                     writer.WriteEndElement();
                 }
             } else {
-                var propCi = new SerializableClassInfo(value, CultureInfo, DateTimeFormat, null, SuppressId);
+                var propCi = new SerializableClassInfo(value, CultureInfo, DateTimeFormat, null, EnableRecursiveSerialization);
                 if (propCi.SerializableClassAttribute != null) {
                     SerializeClass(writer, propCi, false, propertyName);
                 } else {
@@ -362,7 +371,8 @@ namespace LazyApiPack.XmlTools {
                     writer.WriteStartElement(propertyName);
                 }
 
-                if (!serializer.Serialize(writer, value, serializeAsAttribute, CultureInfo, DateTimeFormat, SuppressId)) {
+                if (!serializer.Serialize(writer, value, serializeAsAttribute,
+                                          CultureInfo, DateTimeFormat, EnableRecursiveSerialization)) {
                     throw new ExtendedXmlSerializationException($"Cannot serialize type {propertyType.FullName} with value {value}.");
                 }
                 if (serializeAsAttribute) {

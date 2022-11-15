@@ -5,6 +5,7 @@ using LazyApiPack.XmlTools.Helpers;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Reflection;
 using System.Xml;
@@ -13,13 +14,10 @@ using System.Xml.Linq;
 namespace LazyApiPack.XmlTools {
     public partial class ExtendedXmlSerializer<T> where T : class {
         /// <summary>
-        /// Is raised if the file version is lower than the application version.
+        /// Is raised if the file version does not match the given app version.
         /// </summary>
-        public event FileVersionMismatchDelegate<T>? UpgradeFileVersion;
-        /// <summary>
-        /// Is raised if the file version is higher than the application version.
-        /// </summary>
-        public event FileVersionMismatchDelegate<T>? DowngradeFileVersion;
+        public event FileVersionMismatchDelegate<T>? MigrateXmlDocument;
+
         /// <summary>
         /// Is raised, if a property in the xml is not found in the target class.
         /// </summary>
@@ -29,24 +27,26 @@ namespace LazyApiPack.XmlTools {
         /// Deserializes an xml file to an object.
         /// </summary>
         /// <param name="file">Full file name of the xml.</param>
-        /// <param name="checkAssemblyCompatibility">If true, the serializer checks the application compatibility (migration).</param>
+        /// <param name="checkAppCompatibility">If true, the serializer checks the application compatibility (migration).</param>
         /// <returns>The object that has been deserialized from the given xml.</returns>
         /// <exception cref="FileNotFoundException"></exception>
-        public T Deserialize(string file, bool checkAssemblyCompatibility = false) {
+        public T Deserialize(string file, bool checkAppCompatibility = false) {
             if (!File.Exists(file)) throw new FileNotFoundException($"The specified file ({file}) does not exist");
-            using (var strm = File.OpenRead(file)) {
-                return Deserialize(strm, checkAssemblyCompatibility);
+            using (var fs = File.OpenRead(file)) {
+                return Deserialize(fs, checkAppCompatibility);
             }
         }
         /// <summary>
         /// Deserializes a class from an xml stream.
         /// </summary>
-        /// <param name="checkAssemblyCompatibility">If true, the serializer checks the application compatibility (migration).</param>
+        /// <param name="checkAppCompatibility">If true, the serializer checks the application compatibility for migration.</param>
         /// <returns>The object that has been deserialized from the given xml.</returns>
-        public T Deserialize(Stream sourceStream, bool checkAssemblyCompatibility = false) {
+        public T Deserialize([NotNull] Stream sourceStream, bool checkAppCompatibility = false) {
+            if (sourceStream == null) throw new ArgumentNullException(nameof(sourceStream));
+            var pos = sourceStream.Position;
+
             try {
 
-                sourceStream.Position = 0;
                 var nsmgr = new XmlNamespaceManager(new NameTable());
                 nsmgr.AddNamespace("lzyxmlx", "http://www.jodiewatson.net/xml/lzyxmlx/1.0");
                 var context = new XmlParserContext(null, nsmgr, null, XmlSpace.None);
@@ -59,21 +59,13 @@ namespace LazyApiPack.XmlTools {
                 var headerElement = root.Nodes().OfType<XElement>().First(e => e.Name == XName.Get("Header"));
                 var header = GetHeader(headerElement);
 
-                if (checkAssemblyCompatibility) {
+                if (checkAppCompatibility) {
                     if (header == null) {
-                        throw new ExtendedXmlSerializationException($"The header section in the xml was not found but the {nameof(checkAssemblyCompatibility)} parameter was set to true.");
-                    } else {
-                        if (header.AssemblyName != AssemblyName) {
-                            throw new ExtendedXmlSerializationException($"The Assembly-Name in the file header {header.AssemblyName} does not match the assembly name in the executing program {AssemblyName}.\nThis file cannot be deserialized with this assembly.");
-                        }
+                        throw new ExtendedXmlSerializationException($"The header section in the xml was not found but the {nameof(checkAppCompatibility)} parameter was set to true.");
                     }
-                    if (VersionMismatch(header) < 0) {
-                        if (UpgradeFileVersion == null || !UpgradeFileVersion(this, header.AssemblyVersion, AssemblyVersion, document)) {
-                            throw new ExtendedXmlFileException("File can not be deserialized. The Fileversion is older than the application and the upgrade process has failed.");
-                        }
-                    } else if (VersionMismatch(header) > 0) {
-                        if (DowngradeFileVersion == null || !DowngradeFileVersion(this, header.AssemblyVersion, AssemblyVersion, document)) {
-                            throw new ExtendedXmlFileException("File can not be deserialized. The Fileversion is newer than the application and the upgrade process has failed.");
+                    if (VersionMismatch(header) != 0) {
+                        if (MigrateXmlDocument?.Invoke(this, header.AppName, AppName, header.AppVersion, AppVersion, document) != true) {
+                            throw new ExtendedXmlFileException("File can not be deserialized. The xml version does not match the app version and the migration process has failed.");
                         }
                     }
                 }
@@ -87,6 +79,9 @@ namespace LazyApiPack.XmlTools {
             }
             finally {
                 ClearSerializationCache();
+                if (sourceStream.CanSeek) {
+                    sourceStream.Position = pos;
+                }
             }
         }
 
@@ -99,10 +94,10 @@ namespace LazyApiPack.XmlTools {
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         private object DeserializeClass(XElement objectNode, Type objectType) {
             string? id = null;
-            if (!SuppressId) {
-                id = objectNode.Attribute(XName.Get("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value 
+            if (EnableRecursiveSerialization) {
+                id = objectNode.Attribute(XName.Get("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value
                     ?? throw new NullReferenceException($"Id of {objectType.FullName} can not be null because id suppression is not activated.");
-                
+
                 if (objectType.IsAbstract || objectType.IsInterface) {
                     var attType = objectNode.Attributes().First(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
                     objectType = GetCachedType(attType.Value, objectType.Namespace);
@@ -113,7 +108,7 @@ namespace LazyApiPack.XmlTools {
             if (deserializedClass != null) return deserializedClass.Object;
 
             var instance = Activator.CreateInstance(objectType) ?? throw new NullReferenceException($"Can not create instance of {objectType.FullName}.");
-            if (!SuppressId) {
+            if (EnableRecursiveSerialization) {
                 _deserializedObjects.Add(new SerializedClassContainer(id, objectType.FullName ?? objectType.Name, instance));
 
                 // Set Key Property
@@ -130,7 +125,7 @@ namespace LazyApiPack.XmlTools {
             var extended = instance as IExtendedXmlSerializable;
             extended?.OnDeserializing();
             try {
-                var ci = new SerializableClassInfo(instance, CultureInfo, id);
+                var ci = new SerializableClassInfo(instance, CultureInfo, DateTimeFormat, id, EnableRecursiveSerialization);
                 foreach (var xatt in objectNode.Attributes().Where(a => string.IsNullOrWhiteSpace(a.Name.Namespace.NamespaceName))) {
                     var simpleProperty = ci.Properties.FirstOrDefault(p => p.PropertyName == xatt.Name);
                     if (simpleProperty != null) {
@@ -215,7 +210,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="objectType">The type of the enum.</param>
         /// <returns>The deserialized enum or the default value.</returns>
         private object DeserializeEnum(XElement objectNode, Type objectType) {
-            if (string.IsNullOrWhiteSpace(objectNode.Value)) 
+            if (string.IsNullOrWhiteSpace(objectNode.Value))
                 return Activator.CreateInstance(objectType) ?? throw new NullReferenceException($"Can not create instance of {objectType.FullName}.");
             return Enum.Parse(objectType, objectNode.Value);
 
@@ -231,7 +226,7 @@ namespace LazyApiPack.XmlTools {
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         private object? DeserializeArray(XElement objectNode, Type objectType, object? createdOnConstruction) {
             var rank = objectNode.Attribute(XName.Get("rankDescriptor", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value;
-            
+
             if (rank == null) {
                 if (objectNode.Attribute(XName.Get("format", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value == "Base64") {
                     return DeserializeBinary(objectNode);
@@ -281,10 +276,13 @@ namespace LazyApiPack.XmlTools {
             if (typedef == typeof(Nullable<>)) {
                 return DeserializeProperty(objectNode, typeargs[0], createdOnConstruction);
                 //} else if (typedef == typeof(List<>) || typedef == typeof(Collection<>) || typedef == typeof(ReadOnlyCollection<>) || typedef == typeof(ObservableCollection<>)) {
-            } else if (typeof(IList).IsAssignableFrom(typedef)) {
-                return DeserializeList(objectNode, objectType, typeargs[0], createdOnConstruction);
             } else if (typedef == typeof(Dictionary<,>)) {
                 return DeserializeDictionary(objectNode, objectType, typeargs[0], typeargs[1], createdOnConstruction);
+            } else if (typeof(IList).IsAssignableFrom(typedef) ||
+                typeof(IList<>).IsAssignableFrom(typedef) || 
+                typeof(ICollection).IsAssignableFrom(typedef) || 
+                typeof(ICollection<>).IsAssignableFrom(typedef)) {
+                return DeserializeList(objectNode, objectType, typeargs[0], createdOnConstruction);
             } else {
                 if (TryDeserializePropertyExternal(objectNode.Value, objectType, out var deserialized)) {
                     return deserialized;
@@ -408,7 +406,7 @@ namespace LazyApiPack.XmlTools {
         private bool TryDeserializePropertyExternal(string value, Type objectType, out object? deserialized) {
             var deserializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(objectType));
             if (deserializer != null) {
-                deserialized = deserializer.Deserialize(value, objectType, CultureInfo, DateTimeFormat, SuppressId);
+                deserialized = deserializer.Deserialize(value, objectType, CultureInfo, DateTimeFormat, EnableRecursiveSerialization);
                 return true;
             } else {
                 deserialized = null;

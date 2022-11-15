@@ -27,7 +27,7 @@ namespace LazyApiPack.XmlTools.Wpf {
     /// Adds serialization support for System.Windows.Thickness.
     /// </summary>
     public class WindowsThicknessSerializer : IExternalObjectSerializer {
-        public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string? dateTimeFormat, bool suppressId) {
+        public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization) {
             if (value == null) {
                 writer.WriteValue(null);
             } else {
@@ -37,7 +37,7 @@ namespace LazyApiPack.XmlTools.Wpf {
             return true;
         }
 
-        public object? Deserialize(string? value, Type type, IFormatProvider format, string? dateTimeFormat, bool suppressId) {
+        public object? Deserialize(string? value, Type type, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization) {
             if (string.IsNullOrWhiteSpace(value)) return default(Thickness);
 
             var s = value.Split(",");

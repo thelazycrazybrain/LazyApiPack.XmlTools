@@ -22,9 +22,15 @@ namespace LazyApiPack.XmlTools.Delegates {
     /// </summary>
     /// <typeparam name="TExtendedXmlSerializer">The type of the Serializer.</typeparam>
     /// <param name="sender">The instance of the Xml Serializer.</param>
-    /// <param name="fileVersion">The fileversion specified in the xml.</param>
-    /// <param name="targetVersion">The version matchin the application version or the provided version to the Xml Serializer.</param>
+    /// <param name="xmlAppName">Name of the app that was specified in the xml.</param>
+    /// <param name="currentAppName">Name of the app given to the current xml serializer.</param>
+    /// <param name="xmlAppVersion">The fileversion specified in the xml.</param>
+    /// <param name="currentAppVersion">The version matchin the application version or the provided version to the Xml Serializer.</param>
     /// <param name="document">The document that needs to be converted.</param>
     /// <returns>True, if the document was converted and can be deserialized, or false, if the conversion did not succeed or was not conducted.</returns>
-    public delegate bool FileVersionMismatchDelegate<TExternalXmlSerializer>(ExtendedXmlSerializer<TExternalXmlSerializer> sender, Version fileVersion, Version targetVersion, XDocument document) where TExternalXmlSerializer : class;
+    public delegate bool FileVersionMismatchDelegate<TExternalXmlSerializer>(
+        ExtendedXmlSerializer<TExternalXmlSerializer> sender,
+        string? xmlAppName, string? currentAppName,
+        Version xmlAppVersion, Version currentAppVersion,
+        XDocument document) where TExternalXmlSerializer : class;
 }

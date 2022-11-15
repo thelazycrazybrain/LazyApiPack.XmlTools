@@ -21,9 +21,9 @@ namespace LazyApiPack.XmlTools {
         /// <param name="type">The object type that value represents.</param>
         /// <param name="format">The format that the current serializer uses.</param>
         /// <param name="dateTimeFormat">The dateTime format that the current serializer uses.</param>
-        /// <param name="suppressId">If true, the serializer does not use Ids (Recursive serialization not possible).</param>
+        /// <param name="enableRecursiveSerialization">Enables recursive object serialization.</param>
         /// <returns>The deserialized object of value.</returns>
-        object? Deserialize(string? value, Type type, IFormatProvider format, string? dateTimeFormat, bool suppressId);
+        object? Deserialize(string? value, Type type, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization);
         /// <summary>
         /// Serializes the object to xml
         /// </summary>

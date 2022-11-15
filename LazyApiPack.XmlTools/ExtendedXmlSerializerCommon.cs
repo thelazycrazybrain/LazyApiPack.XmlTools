@@ -11,39 +11,36 @@ using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools {
     public partial class ExtendedXmlSerializer<T> where T : class {
-        public ExtendedXmlSerializer() {
+        private ExtendedXmlSerializer() {
             _serializedObjects = new List<SerializableClassInfo>();
             _deserializedObjects = new List<SerializedClassContainer>();
             _cachedTypes = new Dictionary<string, Type>();
         }
-        /// <summary>
-        /// Creates an instance of the ExtendedXmlSerializer
-        /// </summary>
-        /// <param name="suppressId">If true, the serializer supports recursive serialization.</param>
-        public ExtendedXmlSerializer(bool suppressId) : this() {
-            SuppressId = suppressId;
-        }
 
         /// <summary>
-        /// Creates an instance of the ExtendedXmlSerializer.
+        /// Creates an instance of the extended xml serializer.
         /// </summary>
-        /// <param name="cultureInfo">Format that this instance uses to serialize and deserialize the xml.</param>
-        /// <param name="suppressId">If true, the serializer supports recursive serialization.</param>
-        public ExtendedXmlSerializer(CultureInfo cultureInfo, bool suppressId) : this(suppressId) {
-            CultureInfo = cultureInfo;
-
-        }
-
-        /// <summary>
-        /// Creates an instance of the ExtendedXmlSerializer.
-        /// </summary>
-        /// <param name="cultureInfo">Format that this instance uses to serialize and deserialize the xml.</param>
-        /// <param name="dateTimeFormat">Format that this instance uses to serialize and deserialize DateTimes.</param>
-        /// <param name="suppressId">If true, the serializer supports recursive serialization.</param>
-        public ExtendedXmlSerializer(CultureInfo cultureInfo, string dateTimeFormat, bool suppressId) : this(cultureInfo, suppressId) {
+        /// <param name="enableRecursiveSerialization">Enables objects to be serialized recurively with an Id</param>
+        /// <param name="cultureInfo">Localized format for numbers, dates etc. used in the xml.</param>
+        /// <param name="dateTimeFormat">Format in which DateTimes are serialized in the xml.</param>
+        /// <param name="appName">Name of the app for compatiblity checks.</param>
+        /// <param name="appVersion">Version of the app for compatibility checks.</param>
+        /// <param name="xmlFormatting">Xml Format</param>
+        public ExtendedXmlSerializer(bool enableRecursiveSerialization = true,
+                                     CultureInfo? cultureInfo = null,
+                                     string? dateTimeFormat = null,
+                                     string? appName = null,
+                                     Version? appVersion = null,
+                                     Formatting xmlFormatting = Formatting.Indented,
+                                     bool useFullNamespace = true) : this() {
+            EnableRecursiveSerialization = enableRecursiveSerialization;
+            CultureInfo = cultureInfo ?? CultureInfo.InvariantCulture;
             DateTimeFormat = dateTimeFormat;
+            AppVersion = appVersion;
+            AppName = appName;
+            XmlFormatting = xmlFormatting;
+            UseFullNamespace = useFullNamespace;
         }
-
 
         #region Properties
         /// <summary>
@@ -57,7 +54,7 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// If the Id is suppressed, recursive serialization / deserialization is not supported.
         /// </summary>
-        public bool SuppressId { get; set; } = false;
+        public bool EnableRecursiveSerialization { get; set; } = true;
 
         /// <summary>
         /// Contains a list of serializer extensions that are used to serialize and deserialize custom types.
@@ -68,7 +65,7 @@ namespace LazyApiPack.XmlTools {
         /// </summary>
         /// <remarks>Use False, if you want to serialize / deserialize in different programs with different namespaces.</remarks>
         /// <remarks>If true, the classes need to be in the same namespace as the root class.</remarks>
-        public bool UseFullNamespace { get; set; } = true;
+        public bool UseFullNamespace { get; set; }
 
 
         string _rootElementName = "ExtendedSerializedObjectFile";
@@ -93,60 +90,29 @@ namespace LazyApiPack.XmlTools {
         /// </summary>
         public CultureInfo CultureInfo { get; set; } = CultureInfo.InvariantCulture;
 
+        Version? _appVersion;
         /// <summary>
-        /// The current assembly version of the program (for migration support).
+        /// Version of the app or the assembly version of the entry assembly.
         /// </summary>
-        public Version AssemblyVersion
+        public Version AppVersion
         {
-            get
-            {
-                if (_overwrittenAssemblyVersion != null) {
-                    return _overwrittenAssemblyVersion;
-                } else {
-                    return _callingAssemblyVersion ?? throw new NullReferenceException("Version can not be determined because the EntryAssembly version and the overwritten Assembly version are null.");
-                }
-            }
-            set
-            {
-                _overwrittenAssemblyVersion = value;
-            }
+            get => _appVersion ?? Assembly.GetEntryAssembly()?.GetName().Version ?? throw new NullReferenceException("App version is not specified and can not determined.");
+            set => _appVersion = value;
         }
 
+        string? _appName;
         /// <summary>
-        /// Assembly name of the program (for compatibility checks)
+        /// Name of the app or the assembly title of the entry assembly.
         /// </summary>
-        public string? AssemblyName
+        public string? AppName
         {
-            get
-            {
-                if (!string.IsNullOrWhiteSpace(_overwrittenAssemblyName)) {
-                    return _overwrittenAssemblyName;
-                } else {
-                    return _callingAssemblyName;
-                }
-            }
-            set
-            {
-                _overwrittenAssemblyName = value;
-            }
+            get => !string.IsNullOrEmpty(_appName) ?
+                    _appName :
+                    Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyTitleAttribute>()?.Title;
+            set => _appName = value;
+
         }
 
-        /// <summary>
-        /// If version is overwritten, this version will be used instead of the Assembly Version.
-        /// </summary>
-        Version? _overwrittenAssemblyVersion = null;
-        /// <summary>
-        /// Version of the calling assembly.
-        /// </summary>
-        Version? _callingAssemblyVersion = Assembly.GetEntryAssembly()?.GetName().Version;
-        /// <summary>
-        /// If name is overwritten, this assembly name will be used instead of Assembly Name.
-        /// </summary>
-        string? _overwrittenAssemblyName = null;
-        /// <summary>
-        /// Title of the assembly.
-        /// </summary>
-        string? _callingAssemblyName = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyTitleAttribute>()?.Title;
         /// <summary>
         /// Contains a cache of the classes that have been already serialized (to support xml compression and recursive serialization.
         /// </summary>
@@ -211,15 +177,14 @@ namespace LazyApiPack.XmlTools {
         }
 
         /// <summary>
-        /// Writes the xml root header with the assembly name, version and timestamp.
+        /// Writes the xml header that is needed for xml migration
         /// </summary>
         /// <param name="header">Header that is written to the xml.</param>
         /// <param name="writer">Xml writer that is used for the serialization.</param>
         private void WriteHeader(ExtendedXmlHeader header, XmlWriter writer) {
             writer.WriteStartElement("Header");
-            writer.WriteAttributeString("AssemblyName", header.AssemblyName);
-            writer.WriteAttributeString("AssemblyVersion", header.AssemblyVersion.ToString(4));
-            writer.WriteAttributeString("CreationTimeStamp", SerializationHelper.DateTimeToFormattedString(header.CreationTimeStamp, CultureInfo, DateTimeFormat));
+            writer.WriteAttributeString("AppName", header.AppName);
+            writer.WriteAttributeString("AppVersion", header.AppVersion.ToString(4));
             writer.WriteEndElement();
         }
 
@@ -263,28 +228,23 @@ namespace LazyApiPack.XmlTools {
         private ExtendedXmlHeader? GetHeader([NotNull] XElement headerElement) {
             try {
                 return new ExtendedXmlHeader(
-                                headerElement.Attribute(XName.Get("AssemblyName"))?.Value
-                                                                        ?? throw new NullReferenceException("AssemblyName missing in xml."),
-                                Version.Parse(headerElement.Attribute(XName.Get("AssemblyVersion"))?.Value
-                                                                        ?? throw new NullReferenceException("AssemblyVersion missing in xml.")),
-                                ParseFormattedDateTime(headerElement.Attribute(XName.Get("CreationTimeStamp"))?.Value));
+                                headerElement.Attribute(XName.Get("AppName"))?.Value
+                                                                        ?? throw new NullReferenceException("AppName missing in xml."),
+                                Version.Parse(headerElement.Attribute(XName.Get("AppVersion"))?.Value
+                                                                        ?? throw new NullReferenceException("AppVersion missing in xml.")));
             } catch {
                 throw new ExtendedXmlFileException("Invalid Header Format");
             }
         }
 
         /// <summary>
-        /// Checks the version of the given header against the current assembly version
+        /// Checks if the version in the xml does not match the current app version.
         /// </summary>
         /// <returns>-1 -> given version is smaller; 0 given version is equal; 1 given version is greater</returns>
         int VersionMismatch(ExtendedXmlHeader header) {
-            if (header.AssemblyVersion < AssemblyVersion) {
-                return -1;
-            } else if (header.AssemblyVersion == AssemblyVersion) {
-                return 0;
-            } else {
-                return 1;
-            }
+            if (header.AppVersion < AppVersion) return -1;
+            if (header.AppVersion > AppVersion) return 1;
+            return 0;
         }
 
         /// <summary>

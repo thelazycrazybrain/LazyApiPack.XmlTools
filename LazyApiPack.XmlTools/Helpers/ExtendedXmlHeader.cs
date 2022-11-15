@@ -3,23 +3,22 @@
     /// Represents the xml header that is used for compatibily checks
     /// </summary>
     public class ExtendedXmlHeader {
-        public ExtendedXmlHeader(string? assemblyName, Version assemblyVersion, DateTime? creationTimeStamp) {
-            AssemblyName =assemblyName;
-            AssemblyVersion =assemblyVersion;
-            CreationTimeStamp =creationTimeStamp;
+        /// <summary>
+        /// Header for the xml to provide functionality for xml migration.
+        /// </summary>
+        /// <param name="appName">Name of the app that created the xml.</param>
+        public ExtendedXmlHeader(string? appName, Version appVersion) {
+            AppName =appName;
+            AppVersion =appVersion;
         }
 
         /// <summary>
-        /// The Version of the assembly with which the xml was created.
+        /// Version of the app that created the xml
         /// </summary>
-        public Version AssemblyVersion { get; private set; }
+        public Version AppVersion { get; private set; }
         /// <summary>
-        /// The Assembly that created the xml file.
+        /// Name of the app that created the xml.
         /// </summary>
-        public string? AssemblyName { get; private set; }
-        /// <summary>
-        /// The timestamp when the xml was created.
-        /// </summary>
-        public DateTime? CreationTimeStamp { get; private set; }
+        public string? AppName { get; private set; }
     }
 }

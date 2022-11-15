@@ -17,6 +17,13 @@ namespace LazyApiPack.XmlTools.Tests.Model {
             set => SetPropertyValue(ref _name, value);
         }
 
+        private DateTime _lastLearned;
+        [XmlAttribute]
+        public DateTime LastLearned
+        {
+            get => _lastLearned;
+            set => SetPropertyValue(ref _lastLearned, value);
+        }
         private ObservableCollection<QuestionSet> _questions = new ObservableCollection<QuestionSet>();
         [XmlArray("Sets")]
         [XmlArrayItem("Set")]

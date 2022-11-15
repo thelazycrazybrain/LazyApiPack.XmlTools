@@ -49,11 +49,7 @@ namespace LazyApiPack.XmlTools.Tests.Model {
                     _imageData = null;
                 } else {
                     var pos = value.Position;
-                    if (value.CanSeek) {
-                        value.Position = 0;
-                    }
-
-                    var buff = new byte[value.Length];
+                    var buff = new byte[value.Length - value.Position];
                     value.Read(buff, 0, buff.Length);
                     _imageData = buff;
                     if (value.CanSeek) {

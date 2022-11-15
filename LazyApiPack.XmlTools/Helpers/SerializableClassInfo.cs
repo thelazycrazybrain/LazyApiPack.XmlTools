@@ -18,14 +18,15 @@ namespace LazyApiPack.XmlTools.Helpers {
         /// <param name="format">The format information the serializer uses to generate the xml for this object.</param>
         /// <param name="dateTimeFormat">The date time format used in the serialized xml.</param>
         /// <param name="id">The identifier (Simple type or Guid) for this object if the Id property is specified or the object hash.</param>
-        /// <param name="suppessId">If true, the Id is not used for serialization (Disables recursive serialization!)</param>
+        /// <param name="enableRecuriveSerialization">Enables objects to be serialized recursively (Uses an object Id).</param>
         /// <exception cref="NotSupportedException">If an Id was given that is neither a simple type nor a Guid.</exception>
-        public SerializableClassInfo([NotNull] object sourceObject, IFormatProvider? format, string? dateTimeFormat, string? id = null, bool suppessId = false) {
+        public SerializableClassInfo([NotNull] object sourceObject, IFormatProvider? format, 
+                                     string? dateTimeFormat, string? id = null, bool enableRecuriveSerialization = true) {
             if (sourceObject == null) throw new ArgumentNullException(nameof(sourceObject));
             Format = format;
             Object = sourceObject;
             ClassType = sourceObject.GetType();
-            if (!suppessId) {
+            if (enableRecuriveSerialization) {
                 if (string.IsNullOrWhiteSpace(id)) {
                     // Check if class provides a key property (Only if the class is serializable
                     if (ClassType.GetCustomAttribute<XmlClassAttribute>() != null) {

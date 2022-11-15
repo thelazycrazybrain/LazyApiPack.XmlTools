@@ -4,9 +4,9 @@ namespace LazyApiPack.XmlTools.Tests.ModelBase
 {
     public abstract class ExtendedXmlSerializableTestBase : XmlSerializableTestBase, IExtendedXmlSerializable
     {
-        protected bool IsSerializing { get; private set; }
-        protected bool IsDeserializing { get; private set; }
-        protected bool IsInvalid { get; private set; }
+        internal bool IsSerializing { get; private set; }
+        internal bool IsDeserializing { get; private set; }
+        internal bool IsInvalid { get; private set; }
 
         public virtual void OnDeserialized(bool success)
         {

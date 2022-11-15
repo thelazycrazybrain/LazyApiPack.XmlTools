@@ -107,7 +107,32 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
             Assert.IsFalse(deserialized.IsDeserializing);
 
 
-            // TODO: check dictionaries and stuff.
+
+            Assert.That(_model.Dictionary.Count, Is.EqualTo(deserialized.Dictionary.Count), "Dictionary count is not equal.");
+            Assert.IsTrue(deserialized.Dictionary.ContainsKey("My key 1"), "Key 1 does not exist in dictionary.");
+
+            var carItemDict = deserialized.Dictionary["My key 1"];
+            var sharedCar = carItemDict.ElementAt(2);
+
+            var secondCarItemDict = deserialized.Dictionary["My key 7"];
+            var sharedCarIn7 = secondCarItemDict.ElementAt(2);
+            Assert.That(sharedCar, Is.EqualTo(sharedCarIn7), "Shared car 7 item is not the same object in dictionary.");
+
+
+            Assert.That(_model.Array.Length, Is.EqualTo(deserialized.Array.Length), "Dictionary count is not equal.");
+            var carItem = deserialized.Array[0].ElementAt(2) as CarItem;
+            Assert.NotNull(carItem, "CarItem of array (2) is null.");
+
+            Assert.That(carItem, Is.EqualTo(sharedCar), "Shared car item is not the same object in array.");
+            var modelCar = _model.Array[0].ElementAt(2) as CarItem;
+            Assert.That(modelCar.Name, Is.EqualTo(carItem.Name), "Car item 2 has changed!");
+
+
+            Assert.That(_model.List.Count, Is.EqualTo(deserialized.List.Count), "List count is not equal.");
+            Assert.That(_model.List.ElementAt(2), Is.EqualTo(deserialized.List.ElementAt(2)), "List item (2) is not equal with target.");
+
+
+
 
             Assert.Pass();
         }

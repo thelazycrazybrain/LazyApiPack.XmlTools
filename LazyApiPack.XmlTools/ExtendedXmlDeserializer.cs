@@ -63,10 +63,21 @@ namespace LazyApiPack.XmlTools {
                     if (header == null) {
                         throw new ExtendedXmlSerializationException($"The header section in the xml was not found but the {nameof(checkAppCompatibility)} parameter was set to true.");
                     }
-                    if (VersionMismatch(header) != 0) {
-                        if (MigrateXmlDocument?.Invoke(this, header.AppName, AppName, header.AppVersion, AppVersion, document) != true) {
-                            throw new ExtendedXmlFileException("File can not be deserialized. The xml version does not match the app version and the migration process has failed.");
-                        }
+
+                    bool requiredMigration = VersionMismatch(header) != 0;
+                    bool appNameMismatch = string.Compare(header.AppName, AppName) != 0;
+
+                    // If version does not match, the update is required and the MigrateXmlDocument Handler must not be null
+                    // If only the app name mismatches, the upgrade handler is invoked if it is there, otherwise the name mismatch
+                    // is not treated as a problem.
+                    if ((requiredMigration && MigrateXmlDocument == null) ||
+                        ((appNameMismatch || requiredMigration) &&
+                        MigrateXmlDocument?.Invoke(this, header.AppName, AppName, header.AppVersion, AppVersion, document) != true
+                        )) {
+                        throw new ExtendedXmlFileException(
+@$"File can not be deserialized.
+Either the xml version {header.AppVersion} does not match the app version {AppVersion} and the MigrateXmlDocument event is not handled, or the MigrateXmlDocument migration has failed.");
+
                     }
                 }
 
@@ -99,8 +110,8 @@ namespace LazyApiPack.XmlTools {
                     ?? throw new NullReferenceException($"Id of {objectType.FullName} can not be null because id suppression is not activated.");
 
                 if (objectType.IsAbstract || objectType.IsInterface) {
-                    var attType = objectNode.Attributes().First(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
-                    objectType = GetCachedType(attType.Value, objectType.Namespace);
+                    var attType = GetTypeFromAttribute(objectNode) ?? throw new InvalidOperationException($"Class Type was not found in xml for {objectType.FullName}.");
+                    objectType = GetCachedType(attType, objectType.Namespace);
                 }
             }
 
@@ -160,6 +171,10 @@ namespace LazyApiPack.XmlTools {
             //    }
             //}
             return instance;
+        }
+
+        private string? GetTypeFromAttribute([NotNull] XElement objectNode) {
+            return objectNode.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value;
         }
 
         /// <summary>
@@ -246,13 +261,18 @@ namespace LazyApiPack.XmlTools {
                 array = Array.CreateInstance(objectType.GetElementType() ?? throw new NullReferenceException($"Element type of array {objectType.FullName} is null."), length);
             }
 
-            var items = objectNode.Elements(XName.Get("Item", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
+            var items = objectNode.Elements();
             var descriptor = new SerializableArray(array);
             while (descriptor.MoveNext()) {
                 var node = items.FirstOrDefault(i => i.Attribute(XName.Get("index", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value == descriptor.CurrentIndexString);
+
+
                 if (node != null) {
-                    // Nullable Properties are not serialized
+
                     descriptor.Current = DeserializeProperty(node, descriptor.ItemType, createdOnConstruction);
+
+                    // Nullable Properties are not serialized
+
                 }
             }
 
@@ -279,8 +299,8 @@ namespace LazyApiPack.XmlTools {
             } else if (typedef == typeof(Dictionary<,>)) {
                 return DeserializeDictionary(objectNode, objectType, typeargs[0], typeargs[1], createdOnConstruction);
             } else if (typeof(IList).IsAssignableFrom(typedef) ||
-                typeof(IList<>).IsAssignableFrom(typedef) || 
-                typeof(ICollection).IsAssignableFrom(typedef) || 
+                typeof(IList<>).IsAssignableFrom(typedef) ||
+                typeof(ICollection).IsAssignableFrom(typedef) ||
                 typeof(ICollection<>).IsAssignableFrom(typedef)) {
                 return DeserializeList(objectNode, objectType, typeargs[0], createdOnConstruction);
             } else {
@@ -305,9 +325,9 @@ namespace LazyApiPack.XmlTools {
             var dictionary = Activator.CreateInstance(dictionaryType) as IDictionary ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {dictionaryType.FullName}.");
 
             foreach (var item in objectNode.Elements()) {
-                var keyElement = item.Element(XName.Get("Key", "http://www.jodiewatson.net/xml/lzyxmlx/1.0")) ?? throw new ExtendedXmlSerializationException("Could not find Key element in xml.");
+                var keyElement = item.Element(XName.Get("Key")) ?? throw new ExtendedXmlSerializationException("Could not find Key element in xml.");
                 var key = DeserializeProperty(keyElement, keyType, createdOnConstruction);
-                var valueElement = item.Element(XName.Get("Value", "http://www.jodiewatson.net/xml/lzyxmlx/1.0")) ?? throw new ExtendedXmlSerializationException("Could not find Value element in xml.");
+                var valueElement = item.Element(XName.Get("Value")) ?? throw new ExtendedXmlSerializationException("Could not find Value element in xml.");
                 var value = DeserializeProperty(valueElement, valueType, createdOnConstruction);
                 dictionary.Add(key, value);
             }
@@ -327,25 +347,37 @@ namespace LazyApiPack.XmlTools {
             if (listType.GetGenericTypeDefinition() == typeof(ReadOnlyCollection<>)) {
                 var tempListType = typeof(List<>).MakeGenericType(itemType);
                 var tempList = Activator.CreateInstance(tempListType) as IList ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {tempListType.FullName}.");
-                foreach (var element in objectNode.Elements()) {
-                    var attType = element.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
+                foreach (var element in objectNode.Elements().ToList()) {
+                    var attType = GetTypeFromAttribute(element);
                     var currentItemType = itemType;
                     if (attType != null) {
-                        currentItemType = GetCachedType(attType.Value, itemType.Namespace);
+                        currentItemType = GetCachedType(attType, itemType.Namespace);
                     }
                     tempList.Add(DeserializeProperty(element, currentItemType, createdOnConstruction));
                 }
                 return Activator.CreateInstance(listType, tempList) ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {listType.FullName}."); ;
             } else {
-                var list = createdOnConstruction as IList ?? Activator.CreateInstance(listType) as IList ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {listType.FullName}.");
+                var list = createdOnConstruction as IList;
+                if (list == null) {
+                    if (listType.IsGenericType || listType.IsAbstract || listType.IsInterface) {
+                        var strType = GetTypeFromAttribute(objectNode);
+                        var type = GetCachedType(strType, null);
+                        list  = Activator.CreateInstance(type) as IList;
+                    } else {
 
-                foreach (var element in objectNode.Elements()) {
+                        list = Activator.CreateInstance(listType) as IList ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {listType.FullName}.");
+                    }
+                }
+                // TODO: CreatedOnConstruction is not of type IList
+
+                foreach (var element in objectNode.Elements().ToList()) {
                     var attType = element.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
                     var currentItemType = itemType;
                     if (attType != null) {
                         currentItemType = GetCachedType(attType.Value, itemType.Namespace);
                     }
-                    list.Add(DeserializeProperty(element, currentItemType, createdOnConstruction));
+                    var value = DeserializeProperty(element, currentItemType, createdOnConstruction);
+                    list.Add(value);
                 }
                 return list;
             }
@@ -380,10 +412,10 @@ namespace LazyApiPack.XmlTools {
         /// <param name="deserialized">The object that has been deserialized.</param>
         /// <returns>True, if the class could be deserialized. Otherwise false.</returns>
         private bool TryDeserializeComplexClass(XElement objectNode, Type objectType, out object? deserialized) {
-            var attType = objectNode.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
+            var attType = GetTypeFromAttribute(objectNode);
 
             if (attType != null) {
-                objectType = GetCachedType(attType.Value, objectType.Namespace);
+                objectType = GetCachedType(attType, objectType.Namespace);
             }
             var att = objectType.GetCustomAttribute<XmlClassAttribute>();
             if (att != null) {

@@ -99,7 +99,8 @@ namespace LazyApiPack.XmlTools {
                 writer.WriteAttributeString("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", classInfo.Id);
             }
             if (isAbstractOrInterface) {
-                writer.WriteAttributeString("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", UseFullNamespace ? classInfo.ClassType.FullName : classInfo.ClassType.Name);
+                SetTypeAttribute(writer, classInfo.ClassType, writeAttributeToCurrentElement);
+               
             }
 
             writeAttributeToCurrentElement?.Invoke(writer);
@@ -157,7 +158,8 @@ namespace LazyApiPack.XmlTools {
                     SerializeArrayProperty(writer, value, propertyInfo, propertyName, writeAttributeToCurrentElement);
                 }
             } else if (propertyType.IsGenericType) {
-                SerializeGenericProperty(writer, value, propertyInfo, propertyName, propertyTypeName, propertyType, writeAttributeToCurrentElement);
+                SerializeGenericProperty(writer, value, propertyInfo, propertyName, propertyTypeName, propertyType, 
+                    (w) => SetTypeAttribute(w, propertyType.IsGenericType ? value.GetType() : propertyType, writeAttributeToCurrentElement));
             } else if (propertyType.IsEnum) {
                 SerializeEnumProperty(writer, (Enum)value, propertyName, writeAttributeToCurrentElement);
             } else if (IsValueType(propertyType)) {
@@ -173,6 +175,7 @@ namespace LazyApiPack.XmlTools {
 
             }
         }
+
 
         /// <summary>
         /// Serializes the value as base64.
@@ -296,6 +299,7 @@ namespace LazyApiPack.XmlTools {
             foreach (DictionaryEntry item in value) {
                 writer.WriteStartElement("Item");
                 SerializeProperty(writer, propertyInfo, item.Key, "Key", keyType.FullName ?? keyType.Name, keyType, keyType.IsInterface || keyType.IsAbstract, null);
+
                 SerializeProperty(writer, propertyInfo, item.Value, "Value", valueType.FullName ?? keyType.Name, valueType, valueType.IsInterface || valueType.IsAbstract, null);
                 writer.WriteEndElement();
             }
@@ -317,8 +321,9 @@ namespace LazyApiPack.XmlTools {
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
         private void SerializeListProperty(XmlWriter writer, IList value, SerializablePropertyInfo propertyInfo, string propertyName, string propertyTypeName, Type propertyType, bool isAbstractOrInterface, Action<XmlWriter>? writeAttributeToCurrentElement) {
             writer.WriteStartElement(propertyName);
+            writeAttributeToCurrentElement?.Invoke(writer);
             foreach (var item in value) {
-                SerializeProperty(writer, propertyInfo, item, propertyInfo.ArrayPropertyItemName, propertyTypeName, propertyType, isAbstractOrInterface, writeAttributeToCurrentElement);
+                SerializeProperty(writer, propertyInfo, item, propertyInfo.ArrayPropertyItemName, propertyTypeName, propertyType, isAbstractOrInterface, null);
             }
             writer.WriteEndElement();
         }
@@ -399,5 +404,18 @@ namespace LazyApiPack.XmlTools {
             }
         }
 
+
+        /// <summary>
+        /// Writes the clsType attribute to the current element.
+        /// </summary>
+        /// <param name="writer">Writer that is used.</param>
+        /// <param name="classType">Type of the class.</param>
+        /// <param name="writeAdditionalAttributesToCurrentElement">Additional attributes from parent.</param>
+        /// <remarks>Uses the UseFullNamespace property.</remarks>
+        private void SetTypeAttribute(XmlWriter writer, Type classType, Action<XmlWriter>? writeAdditionalAttributesToCurrentElement) {
+            writer.WriteAttributeString("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", GetTypeName(classType));
+            writeAdditionalAttributesToCurrentElement?.Invoke(writer);
+
+        }
     }
 }

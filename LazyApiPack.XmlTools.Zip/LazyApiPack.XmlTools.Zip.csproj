@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <Title>The Lazy Crazy Brain Api Pack - Xml Tools - ZIP</Title>
+	  <Description>Provides an easy way to serialize classes to a zip file that use resources (eg. images).</Description>
+	  <Authors>Jodie Watson</Authors>
+	  <Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
+	  <PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
+	  <AssemblyVersion>0.1.2</AssemblyVersion>
+	  <FileVersion>0.1.2</FileVersion>
+	  <Version>$(AssemblyVersion)</Version>
+	  <PackageProjectUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools</PackageProjectUrl>
+	  <PackageReadmeFile>ReadMe.md</PackageReadmeFile>
+	  <RepositoryUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools.git</RepositoryUrl>
+	  <PackageTags>xml;serializer;deserializer;recursive;nested;tool;wpf;zip</PackageTags>
+	  <PackageReleaseNotes>This version is in alpha version.</PackageReleaseNotes>
+	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <None Update="ReadMe.md" Pack="True" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LazyApiPack.XmlTools\LazyApiPack.XmlTools.csproj" />
+  </ItemGroup>
+
+</Project>

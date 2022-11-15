@@ -10,7 +10,7 @@ using System.Xml;
 using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools {
-    public partial class ExtendedXmlSerializer<T> where T : class {
+    public partial class ExtendedXmlSerializer<TClass> where TClass : class {
         private ExtendedXmlSerializer() {
             _serializedObjects = new List<SerializableClassInfo>();
             _deserializedObjects = new List<SerializedClassContainer>();
@@ -52,7 +52,7 @@ namespace LazyApiPack.XmlTools {
         /// </summary>
         public string? DateTimeFormat { get; set; } = null;
         /// <summary>
-        /// If the Id is suppressed, recursive serialization / deserialization is not supported.
+        /// If enabled, recursive serialization is enabled
         /// </summary>
         public bool EnableRecursiveSerialization { get; set; } = true;
 
@@ -116,12 +116,12 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// Contains a cache of the classes that have been already serialized (to support xml compression and recursive serialization.
         /// </summary>
-        /// <remarks>Is only used when SuppressId is set to False</remarks>
+        /// <remarks>Is only used when recursive serialization is enabled.</remarks>
         List<SerializableClassInfo> _serializedObjects;
         /// <summary>
         /// Contains a cache of the classes that have been already deserialized (to support xml compression and recursive serialization.
         /// </summary>
-        /// <remarks>Is only used when SuppressId is set to False</remarks>
+        /// <remarks>Is only used when recursive serialization is enabled.</remarks>
         List<SerializedClassContainer> _deserializedObjects;
         /// <summary>
         /// Types, that have already been reflected.

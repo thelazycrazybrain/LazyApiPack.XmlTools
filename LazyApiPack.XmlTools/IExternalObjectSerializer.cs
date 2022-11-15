@@ -32,11 +32,11 @@ namespace LazyApiPack.XmlTools {
         /// <param name="serializeAsAttribute">True, if the writer is in WriteStartAttribute context - creating elements is not possible!</param>
         /// <param name="format">Current format setting of the serializer.</param>
         /// <param name="dateTimeFormat">Current DateTime Format of the Serializer.</param>
-        /// <param name="suppressId">True, if the current serializer supresses the Id attribute.</param>
+        /// <param name="enableRecursiveSerialization">True if the serializer uses object ids to enable recursive serialization.</param>
         /// <returns>True, if the serialization succeeded.</returns>
         /// <remarks>use writer.WriteValue serializeAsAttribute is True. Otherwise the writer is in ElementStart position.</remarks>
         /// <remarks>Do not close the current node yourself</remarks>
         /// <remarks>If serializeAsAttribute is False, you can create as many subnodes as you want.</remarks>
-        bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string? dateTimeFormat, bool suppressId);
+        bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization);
     }
 }

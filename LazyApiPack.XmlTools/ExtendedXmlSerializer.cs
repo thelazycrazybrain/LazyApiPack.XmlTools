@@ -16,9 +16,9 @@ namespace LazyApiPack.XmlTools {
     /// <summary>
     /// Serializes and deserializes classes to xml
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public partial class ExtendedXmlSerializer<T> where T : class {
-        public void Serialize(object sourceClass, string fileName) {
+    /// <typeparam name="TClass">Class that this serializer can deserialize</typeparam>
+    public partial class ExtendedXmlSerializer<TClass> where TClass : class {
+        public void Serialize(TClass sourceClass, string fileName) {
             using (var serialized = Serialize(sourceClass))
             using (var fs = File.OpenWrite(fileName)) {
                 fs.SetLength(serialized.Length);
@@ -33,7 +33,7 @@ namespace LazyApiPack.XmlTools {
         /// <returns></returns>
         /// <exception cref="NullReferenceException">If sourceclass is null.</exception>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        public Stream Serialize([NotNull] object sourceClass) {
+        public Stream Serialize([NotNull] TClass sourceClass) {
             try {
                 if (sourceClass == null) throw new NullReferenceException("Can not serialize a class which is null.");
                 var targetStream = new MemoryStream();

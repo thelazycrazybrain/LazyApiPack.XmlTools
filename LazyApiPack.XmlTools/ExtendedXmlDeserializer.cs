@@ -12,16 +12,16 @@ using System.Xml;
 using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools {
-    public partial class ExtendedXmlSerializer<T> where T : class {
+    public partial class ExtendedXmlSerializer<TClass> where TClass : class {
         /// <summary>
         /// Is raised if the file version does not match the given app version.
         /// </summary>
-        public event FileVersionMismatchDelegate<T>? MigrateXmlDocument;
+        public event FileVersionMismatchDelegate<TClass>? MigrateXmlDocument;
 
         /// <summary>
         /// Is raised, if a property in the xml is not found in the target class.
         /// </summary>
-        public event UnresolvedPropertyDelegate<T>? PropertyNotFound;
+        public event UnresolvedPropertyDelegate<TClass>? PropertyNotFound;
 
         /// <summary>
         /// Deserializes an xml file to an object.
@@ -30,7 +30,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="checkAppCompatibility">If true, the serializer checks the application compatibility (migration).</param>
         /// <returns>The object that has been deserialized from the given xml.</returns>
         /// <exception cref="FileNotFoundException"></exception>
-        public T Deserialize(string file, bool checkAppCompatibility = false) {
+        public TClass Deserialize(string file, bool checkAppCompatibility = false) {
             if (!File.Exists(file)) throw new FileNotFoundException($"The specified file ({file}) does not exist");
             using (var fs = File.OpenRead(file)) {
                 return Deserialize(fs, checkAppCompatibility);
@@ -41,7 +41,7 @@ namespace LazyApiPack.XmlTools {
         /// </summary>
         /// <param name="checkAppCompatibility">If true, the serializer checks the application compatibility for migration.</param>
         /// <returns>The object that has been deserialized from the given xml.</returns>
-        public T Deserialize([NotNull] Stream sourceStream, bool checkAppCompatibility = false) {
+        public TClass Deserialize([NotNull] Stream sourceStream, bool checkAppCompatibility = false) {
             if (sourceStream == null) throw new ArgumentNullException(nameof(sourceStream));
             var pos = sourceStream.Position;
 
@@ -85,7 +85,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
                 var att = rootType.GetCustomAttribute<XmlClassAttribute>();
                 var className = att?.CustomName ?? rootType.Name;
                 var contents = root.Nodes().OfType<XElement>().First(e => e.Name == XName.Get(className));
-                return (T)DeserializeClass(contents, rootType);
+                return (TClass)DeserializeClass(contents, rootType);
 
             }
             finally {
@@ -107,7 +107,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
             string? id = null;
             if (EnableRecursiveSerialization) {
                 id = objectNode.Attribute(XName.Get("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value
-                    ?? throw new NullReferenceException($"Id of {objectType.FullName} can not be null because id suppression is not activated.");
+                    ?? throw new NullReferenceException($"Id of {objectType.FullName} can not be null because recursive serialization is enabled.");
 
                 if (objectType.IsAbstract || objectType.IsInterface) {
                     var attType = GetTypeFromAttribute(objectNode) ?? throw new InvalidOperationException($"Class Type was not found in xml for {objectType.FullName}.");

@@ -6,13 +6,13 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-		<Title>The Lazy Crazy Brain Api Pack - Xml Tools</Title>
+		<Title>The Lazy Crazy Brain Api Pack - Xml Tools WPF</Title>
 		<Description>Adds support for WPF data types to the Extended Xml serializer </Description>
 		<Authors>Jodie Watson</Authors>
 		<Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
-		<AssemblyVersion>0.1.1</AssemblyVersion>
+		<AssemblyVersion>0.1.2</AssemblyVersion>
 		<PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
-		<FileVersion>0.1.1</FileVersion>
+		<FileVersion>0.1.2</FileVersion>
 		<Version>$(AssemblyVersion)</Version>
 		<PackageProjectUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools</PackageProjectUrl>
 		<PackageReadmeFile>ReadMe.md</PackageReadmeFile>

@@ -10,15 +10,15 @@
 		<Description>Adds support for WPF data types to the Extended Xml serializer </Description>
 		<Authors>Jodie Watson</Authors>
 		<Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
-		<AssemblyVersion>0.1.2</AssemblyVersion>
+		<AssemblyVersion>0.1.4</AssemblyVersion>
 		<PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
-		<FileVersion>0.1.2</FileVersion>
+		<FileVersion>0.1.4</FileVersion>
 		<Version>$(AssemblyVersion)</Version>
 		<PackageProjectUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools</PackageProjectUrl>
 		<PackageReadmeFile>ReadMe.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools.git</RepositoryUrl>
 		<PackageTags>xml;serializer;deserializer;recursive;nested;tool;wpf</PackageTags>
-		<PackageReleaseNotes>This version is in alpha version.</PackageReleaseNotes>
+		<PackageReleaseNotes>Includes support for point and thickness classes (More are coming).</PackageReleaseNotes>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 
 	</PropertyGroup>

@@ -9,11 +9,6 @@ It is not fully tested and I don't give any guarantee that it works in any case.
 # Contribute
 If you want to fix bugs or extend it, feel free to contribute.
 
-# TODO:
-Use the lzyxmlx namespace for Array Indexer attributes and Dictionary Key and Value attributes.
-Test the Migration functionality.
-Performace improvements (if needed).
-
 # Serialization and Deserialization
 If you have a class decorated with the XmlClassAttribute, the Serializer can serialize and deserialize the object.
 This serializer supports recursive serialization (Can be deactivated with the enableRecursiveSerialization flag). It caches all serialized classes with an Id (Either ObjectHash or a property marked with the SerializableKeyAttribute).
@@ -89,6 +84,12 @@ The priorities are therefore separated for XmlAttributes and XmlElements.
 # XmlArrayAttribute, XmlArrayItemAttribute
 Use this attribute to serialize a property or field as an xml array (simple properties only!)
 
+# XmlObsoleteAttribute
+Use this attribute to make a property obsolete in xml.
+If this attribute is present, the property will be deserialized, but not serialized again.
+This attribute is used if a property gets replaced by another property but this value is needed for the migration process.
+
+-> See section "Migration"
 
 # Interfaces
 ## IExtendedXmlSerializable
@@ -255,6 +256,70 @@ The xml contains header information. If the program version does not match the x
 These events give you the file version and the version the serializer was given to check the file version (program version).
 The XDocument contains the loaded xml document. You can modify this document how you like in order for the serializer to deserialize it properly.
 All changes to XDocument are not stored to the file, but the new file with the new format and version will be stored to the file, when the Serializer is called with the Serialize() function.
+
+Example:
+```csharp
+[XmlClass("myClass")]
+public class MyClass {
+	[XmlProperty("value")] // The new property can not have the same name as the new property!
+	[Obsolete] // Note: the System.Obsolete does not change the xml serializer behavior!
+	public string OldValue { get; set; }
+
+	[XmlProperty("intValue")] // The new property needs a new name!
+	public int Value { get; set; }
+	
+}
+```
+The migration process could look like that:
+```csharp
+ private bool Serializer_MigrateXmlDocument(ExtendedXmlSerializer<MyClass> sender, 
+											string? xmlAppName, 
+											string? currentAppName, 
+											Version xmlAppVersion, 
+											Version currentAppVersion, 
+											XDocument document) {
+    if (xmlAppVersion >= new Version(1,2,3,4)) {
+		var cls = document
+					.Element("ExtendedSerializedObjectFile")
+					?.Element("myClass");
+			if (cls != null) {
+				var value = cls.Element("value").Value;
+				if (int.TryParse(value, NumberStyles.Number,
+										sender.CultureInfo, // optional
+										out var intValue)) {
+					cls.Add(new XElement("intValue", intValue); // add the new value to the xml
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				// Not the correct xml.
+				return false;
+			}
+	}
+}
+```
+
+## Handling obsolete properties with the XmlObsoleteAttribute
+If a property gets obsolete or is replaced by another implementation, you can mark the old property with the
+`XmlObsoleteAttribute`.
+If this attribute is present, this property will be deserialized, but not serialized again.
+
+Example of "self-migration":
+```csharp
+[XmlClass("myClass")]
+public class MyClass {
+	[XmlProperty("value")] // The new property can not have the same name as the new property!
+	[XmlObsolete("Use Value instead.")] // Makes this property Deserialize-Only
+	[Obsolete] // Note: the System.Obsolete does not change the xml serializer behavior!
+	public string OldValue {  set => Value = int.Parse(value); } // Note: This property is write-only!
+
+	[XmlProperty("intValue")] // The new property needs a new name!
+	public int Value { get; set; } // this property can be deserialized or set by OldValue (depending if you use an old xml or a new one)
+	
+}
+```
+
 
 # Missing Properties in the class
 If an xml contains an element that is not represented by the class given to the serializer, the PropertyNotFound event is raised. The deserialization will not fail. You can use this event handler, to handle the property manually with

@@ -18,7 +18,14 @@ namespace LazyApiPack.XmlTools.Helpers {
             PropertyName = GetCustomPropertyName();
             PropertyType = property.PropertyType;
             ArrayPropertyItemName = property.GetCustomAttribute<XmlArrayItemAttribute>()?.ElementName ?? "Item";
-            PropertyValue = property.GetValue(instance);
+            if (property.GetCustomAttribute<XmlObsoleteAttribute>() != null) {
+                IsObsolete = true;
+            }
+
+            if (property.CanRead) {
+                PropertyValue = property.GetValue(instance);
+            }
+
             IsXmlAttribute =  property.GetCustomAttribute<XmlAttributeAttribute>() != null;
             IsInstantiable =  !(PropertyType.IsInterface || PropertyType.IsAbstract);
 
@@ -86,6 +93,10 @@ namespace LazyApiPack.XmlTools.Helpers {
         /// </summary>
         public bool IsXmlAttribute { get; }
 
+        /// <summary>
+        /// Indicates if the property is obsolete and might not contain a getter.
+        /// </summary>
+        public bool IsObsolete { get; }
         public override string ToString() {
             return $"{PropertyName}: {PropertyType.FullName ?? PropertyType.Name}";
         }

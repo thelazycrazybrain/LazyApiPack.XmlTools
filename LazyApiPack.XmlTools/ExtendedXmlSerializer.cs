@@ -18,6 +18,11 @@ namespace LazyApiPack.XmlTools {
     /// </summary>
     /// <typeparam name="TClass">Class that this serializer can deserialize</typeparam>
     public partial class ExtendedXmlSerializer<TClass> where TClass : class {
+        /// <summary>
+        /// Serializes a class to an xml file.
+        /// </summary>
+        /// <param name="sourceClass">The class to serialize.</param>
+        /// <param name="fileName">The fully qualified file name for the xml.</param>
         public void Serialize(TClass sourceClass, string fileName) {
             using (var serialized = Serialize(sourceClass))
             using (var fs = File.OpenWrite(fileName)) {
@@ -27,10 +32,10 @@ namespace LazyApiPack.XmlTools {
         }
 
         /// <summary>
-        /// Serializes a class to an xml stream
+        /// Serializes a class to an xml stream.
         /// </summary>
-        /// <param name="sourceClass">The class to serialize</param>
-        /// <returns></returns>
+        /// <param name="sourceClass">The class to serialize.</param>
+        /// <returns>The stream containing the serialized class.</returns>
         /// <exception cref="NullReferenceException">If sourceclass is null.</exception>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         public Stream Serialize([NotNull] TClass sourceClass) {
@@ -100,7 +105,7 @@ namespace LazyApiPack.XmlTools {
             }
             if (isAbstractOrInterface) {
                 SetTypeAttribute(writer, classInfo.ClassType, writeAttributeToCurrentElement);
-               
+
             }
 
             writeAttributeToCurrentElement?.Invoke(writer);
@@ -158,7 +163,7 @@ namespace LazyApiPack.XmlTools {
                     SerializeArrayProperty(writer, value, propertyInfo, propertyName, writeAttributeToCurrentElement);
                 }
             } else if (propertyType.IsGenericType) {
-                SerializeGenericProperty(writer, value, propertyInfo, propertyName, propertyTypeName, propertyType, 
+                SerializeGenericProperty(writer, value, propertyInfo, propertyName, propertyTypeName, propertyType,
                     (w) => SetTypeAttribute(w, propertyType.IsGenericType ? value.GetType() : propertyType, writeAttributeToCurrentElement));
             } else if (propertyType.IsEnum) {
                 SerializeEnumProperty(writer, (Enum)value, propertyName, writeAttributeToCurrentElement);

@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ExtendedSerializedObjectFile xmlns:lzyxmlx="http://www.jodiewatson.net/xml/lzyxmlx/1.0">
+  <Header AppName="testhost" AppVersion="15.0.0.0" />
+  <ObsoleteModel lzyxmlx:objId="39053774">
+    <value>1337</value>
+  </ObsoleteModel>
+</ExtendedSerializedObjectFile>

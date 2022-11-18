@@ -12,7 +12,6 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
         DateTime _checkDateTime;
         [SetUp]
         public void Setup() {
-            var asm = Assembly.GetExecutingAssembly();
             _model = new QuestionCatalog() {
                 Name = "Question Catalog 1",
                 LastLearned = _checkDateTime = DateTime.Now
@@ -35,7 +34,7 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
 
 
             var set1q3 = new PictureQuestion("Fill in the texts in the given image", "Do something...") {
-                ImageStream = asm.GetManifestResourceStream("LazyApiPack.XmlTools.Tests.Resources.Sample1.jpg" ?? throw new NullReferenceException("Application Resource Sample2.jpg was not found.")),
+                ImageStream = ValidationHelper.GetResource("Sample1.jpg"),
                 Mode = PictureQuestionMode.EnterText
             };
 
@@ -50,7 +49,7 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
             set1.Questions.Add(set1q3);
 
             var set1q4 = new PictureQuestion("Fill in the texts in the given image", null) {
-                ImageStream = asm.GetManifestResourceStream("LazyApiPack.XmlTools.Tests.Resources.Sample2.jpg") ?? throw new NullReferenceException("Application Resource Sample2.jpg was not found."),
+                ImageStream = ValidationHelper.GetResource("Sample2.jpg"),
                 Mode = PictureQuestionMode.MoveLabels
             };
 

@@ -75,7 +75,8 @@ namespace LazyApiPack.XmlTools.Helpers {
             var atts = property.GetCustomAttributes();
             return atts.Any(a =>
             {
-                return a is XmlPropertyAttribute ||
+                return !(a is XmlObsoleteAttribute) && 
+                        a is XmlPropertyAttribute ||
                         a is XmlElementAttribute ||
                         a is XmlArrayAttribute ||
                         a is XmlAttributeAttribute;

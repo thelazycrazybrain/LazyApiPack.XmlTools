@@ -28,7 +28,7 @@ namespace LazyApiPack.XmlTools {
         /// </summary>
         /// <param name="file">Full file name of the xml.</param>
         /// <param name="checkAppCompatibility">If true, the serializer checks the application compatibility (migration).</param>
-        /// <returns>The object that has been deserialized from the given xml.</returns>
+        /// <returns>The object that has been deserialized from the given xml file.</returns>
         /// <exception cref="FileNotFoundException"></exception>
         public TClass Deserialize(string file, bool checkAppCompatibility = false) {
             if (!File.Exists(file)) throw new FileNotFoundException($"The specified file ({file}) does not exist");
@@ -40,7 +40,7 @@ namespace LazyApiPack.XmlTools {
         /// Deserializes a class from an xml stream.
         /// </summary>
         /// <param name="checkAppCompatibility">If true, the serializer checks the application compatibility for migration.</param>
-        /// <returns>The object that has been deserialized from the given xml.</returns>
+        /// <returns>The object that has been deserialized from the given xml stream.</returns>
         public TClass Deserialize([NotNull] Stream sourceStream, bool checkAppCompatibility = false) {
             if (sourceStream == null) throw new ArgumentNullException(nameof(sourceStream));
             var pos = sourceStream.Position;
@@ -101,7 +101,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
         /// </summary>
         /// <param name="objectNode">Current node that represents this class.</param>
         /// <param name="objectType">Type of the object.</param>
-        /// <returns></returns>
+        /// <returns>The deserialized class.</returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         private object DeserializeClass(XElement objectNode, Type objectType) {
             string? id = null;
@@ -152,7 +152,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
                 foreach (var xelement in objectNode.Elements()) {
                     var property = ci.Properties.FirstOrDefault(p => p.PropertyName == xelement.Name);
                     if (property != null) {
-                        var createdOnConstruction = property.PropertyInfo.GetValue(instance);
+                        var createdOnConstruction = property.PropertyInfo.CanRead ? property.PropertyInfo.GetValue(instance) : null;
                         var obj = DeserializeProperty(xelement, property.PropertyInfo.PropertyType, createdOnConstruction);
                         property.PropertyInfo.SetValue(instance, obj);
                     } else {

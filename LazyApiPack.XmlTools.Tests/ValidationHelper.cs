@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Reflection;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -12,6 +13,12 @@ namespace LazyApiPack.XmlTools.Tests {
                 stream.Position = pos;
             }
             return doc;
+        }
+
+        internal static Stream? GetResource(string name) {
+            if (name == null) return null;
+            var asm = Assembly.GetExecutingAssembly();
+            return asm.GetManifestResourceStream($"LazyApiPack.XmlTools.Tests.Resources.{name}" ?? throw new NullReferenceException($"Application Resource {name} was not found."));
         }
 
 

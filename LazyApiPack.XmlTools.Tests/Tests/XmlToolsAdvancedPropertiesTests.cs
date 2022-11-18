@@ -137,8 +137,5 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
             Assert.Pass();
         }
 
-        private void _model_MethodCalled(object sender, ModelBase.MethodCalledEventArgs e) {
-            throw new NotImplementedException();
-        }
     }
 }

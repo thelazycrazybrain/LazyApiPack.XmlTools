@@ -9,6 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+
+    <None Remove="Resources\obsolete.xml" />
+
     <None Remove="Resources\Sample1.jpg" />
     <None Remove="Resources\Sample2.jpg" />
     <None Remove="Resources\Sample3.jpg" />
@@ -16,6 +19,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Resources\obsolete.xml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\obsolete.xml" />
     <EmbeddedResource Include="Resources\Sample1.jpg" />
     <EmbeddedResource Include="Resources\Sample2.jpg" />
     <EmbeddedResource Include="Resources\Sample3.jpg" />

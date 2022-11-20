@@ -2,6 +2,7 @@
 using LazyApiPack.XmlTools.Exceptions;
 using LazyApiPack.XmlTools.Helpers;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -19,11 +20,15 @@ namespace LazyApiPack.XmlTools {
     /// <typeparam name="TClass">Class that this serializer can deserialize</typeparam>
     public partial class ExtendedXmlSerializer<TClass> where TClass : class {
         /// <summary>
+        /// Contains the current instance of the XmlWriter while serializing.
+        /// </summary>
+        XmlWriter _writer;
+        /// <summary>
         /// Serializes a class to an xml file.
         /// </summary>
         /// <param name="sourceClass">The class to serialize.</param>
         /// <param name="fileName">The fully qualified file name for the xml.</param>
-        public void Serialize(TClass sourceClass, string fileName) {
+        public void Serialize([NotNull] TClass sourceClass, string fileName) {
             using (var serialized = Serialize(sourceClass))
             using (var fs = File.OpenWrite(fileName)) {
                 fs.SetLength(serialized.Length);
@@ -32,34 +37,33 @@ namespace LazyApiPack.XmlTools {
         }
 
         /// <summary>
+        /// Serializes a list of classes to an xml file
+        /// </summary>
+        /// <param name="sourceClasses">List of classes to serialize.</param>
+        /// <param name="fileName">The fully qualified file name for the xml.</param>
+        public void SerializeAll([NotNull] IEnumerable<TClass> sourceClasses, string fileName) {
+            using (var serialized = SerializeAll(sourceClasses))
+            using (var fs = File.OpenWrite(fileName)) {
+                fs.SetLength(serialized.Length);
+                serialized.CopyTo(fs);
+            }
+        }
+
+
+        /// <summary>
         /// Serializes a class to an xml stream.
         /// </summary>
         /// <param name="sourceClass">The class to serialize.</param>
         /// <returns>The stream containing the serialized class.</returns>
-        /// <exception cref="NullReferenceException">If sourceclass is null.</exception>
+        /// <exception cref="NullReferenceException">If sourceClass is null.</exception>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         public Stream Serialize([NotNull] TClass sourceClass) {
             try {
                 if (sourceClass == null) throw new NullReferenceException("Can not serialize a class which is null.");
                 var targetStream = new MemoryStream();
-
                 using (var ms = new MemoryStream()) {
-                    var xset = new XmlWriterSettings() {
-                        Encoding = Encoding.UTF8,
-                        Indent = true
-                    };
-
-
-                    using (var writer = XmlWriter.Create(ms, xset)) {
-
-                        writer.WriteStartDocument();
-                        writer.WriteStartElement(_rootElementName);
-                        writer.WriteAttributeString("xmlns", "lzyxmlx", null, "http://www.jodiewatson.net/xml/lzyxmlx/1.0");
-
-
-                        var header = new ExtendedXmlHeader(AppName, AppVersion);
-
-                        WriteHeader(header, writer);
+                    using (_writer = CreateXmlWriter(ms)) {
+                        WriteRoot();
                         var clsInfo = new SerializableClassInfo(
                                                 sourceClass, CultureInfo,
                                                 DateTimeFormat, null,
@@ -68,17 +72,58 @@ namespace LazyApiPack.XmlTools {
                             throw new ExtendedXmlSerializationException(
                                 $"Cannot serialize the class {sourceClass.GetType().FullName}. It does not specify the SerializableClass Attribute.");
                         }
-                        SerializeClass(writer, clsInfo, false);
+                        SerializeClass(clsInfo, true);
 
-                        writer.WriteEndElement();
-                        writer.WriteEndDocument();
-                        writer.Flush();
+                        _writer.WriteEndElement();
+                        _writer.WriteEndDocument();
+                        _writer.Flush();
                         ms.Position = 0;
                         targetStream.SetLength(ms.Length);
                         ms.CopyTo(targetStream);
                     }
                 }
+                targetStream.Position = 0;
+                return targetStream;
+            }
+            finally {
+                ClearSerializationCache();
+            }
+        }
 
+        /// <summary>
+        /// Serializes a list of classes to an xml stream.
+        /// </summary>
+        /// <param name="sourceClasses">The classes to serialize.</param>
+        /// <returns>The stream containing the serialized classes.</returns>
+        /// <exception cref="NullReferenceException">If sourceClasses is null.</exception>
+        /// <exception cref="ExtendedXmlSerializationException"></exception>
+        public Stream SerializeAll([NotNull] IEnumerable<TClass> sourceClasses) {
+            try {
+                if (sourceClasses == null) throw new NullReferenceException("Can not serialize a list of classes which is null.");
+                var targetStream = new MemoryStream();
+                using (var ms = new MemoryStream()) {
+                    using (_writer = CreateXmlWriter(ms)) {
+                        WriteRoot();
+                        foreach (var sourceClass in sourceClasses) {
+                            var clsInfo = new SerializableClassInfo(
+                                                    sourceClass, CultureInfo,
+                                                    DateTimeFormat, null,
+                                                    EnableRecursiveSerialization);
+                            if (clsInfo.SerializableClassAttribute == null) {
+                                throw new ExtendedXmlSerializationException(
+                                    $"Cannot serialize the class {sourceClass.GetType().FullName}. It does not specify the SerializableClass Attribute.");
+                            }
+                            SerializeClass(clsInfo, false);
+
+                        }
+                        _writer.WriteEndElement();
+                        _writer.WriteEndDocument();
+                        _writer.Flush();
+                        ms.Position = 0;
+                        targetStream.SetLength(ms.Length);
+                        ms.CopyTo(targetStream);
+                    }
+                }
                 targetStream.Position = 0;
                 return targetStream;
             }
@@ -90,30 +135,29 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// Serializes an object
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="classInfo">The class info representing the object.</param>
-        /// <param name="isAbstractOrInterface">If the class is abstract or an interface, the clsType attribute is set to make the object deserializable.</param>
+        /// <param name="includeObjectNamespace">Speficies, if the clsClass attribute is written to the xml.</param>
         /// <param name="propertyName">The name of the Xml Element. Null if the class is the root class of the xml.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private void SerializeClass(XmlWriter writer, SerializableClassInfo classInfo, bool isAbstractOrInterface,
-                                    string? propertyName = null, Action<XmlWriter>? writeAttributeToCurrentElement = null) {
+        private void SerializeClass(SerializableClassInfo classInfo, bool includeObjectNamespace,
+                                    string? propertyName = null, Action? writeAttributeToCurrentElement = null) {
             if (classInfo.Object == null) return;
-            writer.WriteStartElement(string.IsNullOrWhiteSpace(propertyName) ? classInfo.ClassName : propertyName);
+            _writer.WriteStartElement(string.IsNullOrWhiteSpace(propertyName) ? classInfo.ClassName : propertyName);
             if (EnableRecursiveSerialization) {
-                writer.WriteAttributeString("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", classInfo.Id);
+                _writer.WriteAttributeString("objId", LZYNS, classInfo.Id);
             }
-            if (isAbstractOrInterface) {
-                SetTypeAttribute(writer, classInfo.ClassType, writeAttributeToCurrentElement);
+            if (includeObjectNamespace) {
+                SetTypeAttribute(classInfo.ClassType, writeAttributeToCurrentElement);
 
             }
 
-            writeAttributeToCurrentElement?.Invoke(writer);
+            writeAttributeToCurrentElement?.Invoke();
 
             if (EnableRecursiveSerialization) {
                 if (_serializedObjects.Any(c => c.Id == classInfo.Id && c.ClassType.FullName == classInfo.ClassType.FullName)) {
                     // This class was already serialized
-                    writer.WriteEndElement();
+                    _writer.WriteEndElement();
                     return;
                 }
             }
@@ -125,10 +169,10 @@ namespace LazyApiPack.XmlTools {
             try {
                 // Serialize Properties
                 foreach (var propertyInfo in classInfo.Properties.OrderByDescending(x => x.IsXmlAttribute).ThenBy(x => GetPropertySerializationPriority(x))) {
-                    SerializeProperty(writer, propertyInfo, propertyInfo.PropertyValue, propertyInfo.PropertyName, propertyInfo.PropertyTypeName, propertyInfo.PropertyType, propertyInfo.PropertyInfo.PropertyType.IsInterface, null);
+                    SerializeProperty(propertyInfo, propertyInfo.PropertyValue, propertyInfo.PropertyName, propertyInfo.PropertyTypeName, propertyInfo.PropertyType, propertyInfo.PropertyInfo.PropertyType.IsInterface, null);
 
                 }
-                writer.WriteEndElement();
+                _writer.WriteEndElement();
             } catch (Exception ex) {
                 extendedClass?.OnSerialized(false);
                 throw new ExtendedXmlSerializationException("Serialization failed. See inner exception for more details.", ex);
@@ -141,107 +185,102 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// Serializes a property.
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="propertyInfo">The property that is serialized.</param>
         /// <param name="value">The property value that is serialized.</param>
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="propertyTypeName">Full name of the property type.</param>
         /// <param name="propertyInfo">Property info representing value.</param>
-        /// <param name="isAbstractOrInterface">If the class is abstract or an interface, the clsType attribute is set to make the object deserializable.</param>
+        /// <param name="includeObjectNamespace">Speficies, if the clsClass attribute is written to the xml.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
-        private void SerializeProperty(XmlWriter writer, SerializablePropertyInfo propertyInfo, object? value,
+        private void SerializeProperty(SerializablePropertyInfo propertyInfo, object? value,
                                        string propertyName, string propertyTypeName, Type propertyType,
-                                       bool isAbstractOrInterface, Action<XmlWriter>? writeAttributeToCurrentElement) {
+                                       bool includeObjectNamespace, Action? writeAttributeToCurrentElement) {
             if (value == null) return; // Do not serialize null values
 
             if (propertyType.IsArray) {
                 if (propertyType.GetElementType() == typeof(byte) && propertyType.GetArrayRank() == 1) {
                     // Exception: Byte arrays will be stored as base64 blobs
-                    SerializeBinary(writer, (byte[])value, propertyName, writeAttributeToCurrentElement);
+                    SerializeBinary((byte[])value, propertyName, writeAttributeToCurrentElement);
                 } else {
-                    SerializeArrayProperty(writer, value, propertyInfo, propertyName, writeAttributeToCurrentElement);
+                    SerializeArrayProperty(value, propertyInfo, propertyName, writeAttributeToCurrentElement);
                 }
             } else if (propertyType.IsGenericType) {
-                SerializeGenericProperty(writer, value, propertyInfo, propertyName, propertyTypeName, propertyType,
-                    (w) => SetTypeAttribute(w, propertyType.IsGenericType ? value.GetType() : propertyType, writeAttributeToCurrentElement));
+                SerializeGenericProperty(value, propertyInfo, propertyName, propertyTypeName, propertyType,
+                    () => SetTypeAttribute(propertyType.IsGenericType ? value.GetType() : propertyType, writeAttributeToCurrentElement));
             } else if (propertyType.IsEnum) {
-                SerializeEnumProperty(writer, (Enum)value, propertyName, writeAttributeToCurrentElement);
+                SerializeEnumProperty((Enum)value, propertyName, writeAttributeToCurrentElement);
             } else if (IsValueType(propertyType)) {
-                SerializeValueType(writer, value, propertyInfo, propertyName, writeAttributeToCurrentElement);
+                SerializeValueType(value, propertyInfo, propertyName, writeAttributeToCurrentElement);
             } else {
                 // Is Class
                 var propCi = new SerializableClassInfo(value, CultureInfo, DateTimeFormat, null, EnableRecursiveSerialization);
                 if (propCi.SerializableClassAttribute != null) {
-                    SerializeClass(writer, propCi, isAbstractOrInterface, propertyName);
+                    SerializeClass(propCi, !IsExactType(propCi.ClassType, value) || includeObjectNamespace, propertyName);
                 } else {
-                    SerializePropertyExternal(writer, propCi.Object, propertyInfo.IsXmlAttribute, propertyName, propCi.ClassType);
+                    SerializePropertyExternal(propCi.Object, propertyInfo.IsXmlAttribute, propertyName, propCi.ClassType);
                 }
 
             }
         }
 
-
+        
         /// <summary>
         /// Serializes the value as base64.
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="value">Byte array that is serialized.</param>
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
-        private void SerializeBinary(XmlWriter writer, byte[] value, string propertyName, Action<XmlWriter>? writeAttributeToCurrentElement) {
-            writer.WriteStartElement(propertyName);
-            writeAttributeToCurrentElement?.Invoke(writer);
-            writer.WriteAttributeString("format", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", "Base64");
-            writer.WriteValue(Convert.ToBase64String(value));
-            writer.WriteEndElement();
+        private void SerializeBinary(byte[] value, string propertyName, Action? writeAttributeToCurrentElement) {
+            _writer.WriteStartElement(propertyName);
+            writeAttributeToCurrentElement?.Invoke();
+            _writer.WriteAttributeString("format", LZYNS, "Base64");
+            _writer.WriteValue(Convert.ToBase64String(value));
+            _writer.WriteEndElement();
         }
 
         /// <summary>
         /// Serializes the value as an enum value to the xml
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="value">Enum that is serialized.</param>
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
-        private void SerializeEnumProperty(XmlWriter writer, Enum value, string propertyName, Action<XmlWriter>? writeAttributeToCurrentElement) {
-            writer.WriteStartElement(propertyName);
-            writeAttributeToCurrentElement?.Invoke(writer);
-            writer.WriteValue(value.ToString());
-            writer.WriteEndElement();
+        private void SerializeEnumProperty(Enum value, string propertyName, Action? writeAttributeToCurrentElement) {
+            _writer.WriteStartElement(propertyName);
+            writeAttributeToCurrentElement?.Invoke();
+            _writer.WriteValue(value.ToString());
+            _writer.WriteEndElement();
         }
 
         /// <summary>
         /// Serializes the value as an array.
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="value">Array that is serialized.</param>
         /// <param name="propertyInfo">Property info representing value.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
-        private void SerializeArrayProperty(XmlWriter writer, [NotNull] object value, SerializablePropertyInfo propertyInfo, string propertyName, Action<XmlWriter>? writeAttributeToCurrentElement) {
+        private void SerializeArrayProperty([NotNull] object value, SerializablePropertyInfo propertyInfo, string propertyName, Action? writeAttributeToCurrentElement) {
             var array = ((Array)value);
-            writer.WriteStartElement(propertyName);
-            writeAttributeToCurrentElement?.Invoke(writer);
+            _writer.WriteStartElement(propertyName);
+            writeAttributeToCurrentElement?.Invoke();
             var rankDescriptor = "";
             for (int i = 0; i < array.Rank; i++) {
                 rankDescriptor += array.GetLength(i) + ";";
             }
             rankDescriptor = rankDescriptor.TrimEnd(';');
-            writer.WriteAttributeString("rankDescriptor", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", rankDescriptor);
+            _writer.WriteAttributeString("rankDescriptor", LZYNS, rankDescriptor);
             var arrayIterator = new SerializableArray(array);
             while (arrayIterator.MoveNext()) {
-                SerializeProperty(writer, propertyInfo, arrayIterator.Current, propertyInfo.ArrayPropertyItemName,
+                SerializeProperty(propertyInfo, arrayIterator.Current, propertyInfo.ArrayPropertyItemName,
                     arrayIterator.ItemType.Name, arrayIterator.ItemType, arrayIterator.ItemType.IsInterface ||
-                    arrayIterator.ItemType.IsAbstract, (w) => writer.WriteAttributeString("index",
-                        "http://www.jodiewatson.net/xml/lzyxmlx/1.0", arrayIterator.CurrentIndexString));
+                    arrayIterator.ItemType.IsAbstract, () => _writer.WriteAttributeString("index",
+                        LZYNS, arrayIterator.CurrentIndexString));
             }
-            writer.WriteEndElement();
+            _writer.WriteEndElement();
         }
 
         /// <summary>
         /// Serializes the value as a generic type.
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="value">Generic value that is serialized.</param>
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="propertyTypeName">Full name of the property type.</param>
@@ -250,7 +289,7 @@ namespace LazyApiPack.XmlTools {
         /// <exception cref="ExtendedXmlSerializationException">If the generic type is not supported.</exception>
         /// <remarks>Supported Generics: Nullable, IList, Dictionary</remarks>
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
-        private void SerializeGenericProperty(XmlWriter writer, [NotNull] object value, SerializablePropertyInfo propertyInfo, string propertyName, string propertyTypeName, Type propertyType, Action<XmlWriter>? writeAttributeToCurrentElement) {
+        private void SerializeGenericProperty([NotNull] object value, SerializablePropertyInfo propertyInfo, string propertyName, string propertyTypeName, Type propertyType, Action? writeAttributeToCurrentElement) {
             var typedef = propertyType.GetGenericTypeDefinition();
             var typeArgs = propertyType.GetGenericArguments();
 
@@ -258,18 +297,18 @@ namespace LazyApiPack.XmlTools {
                 // Decapsulate value type
                 propertyType = typeArgs[0];
                 propertyTypeName = propertyType.Name;
-                SerializeProperty(writer, propertyInfo, value, propertyName, propertyTypeName, propertyType, propertyType.IsInterface || propertyType.IsAbstract, writeAttributeToCurrentElement);
+                SerializeProperty(propertyInfo, value, propertyName, propertyTypeName, propertyType, propertyType.IsInterface || propertyType.IsAbstract, writeAttributeToCurrentElement);
             } else if (typedef == typeof(Dictionary<,>)) {
                 var att = propertyType.GetCustomAttribute<DictionaryEqualityComparerAttribute>();
                 var comparerType = att?.EqualityComparerType;
-                SerializeDictionary(writer, (IDictionary)value, typeArgs[0], typeArgs[1], propertyInfo, propertyName, comparerType, writeAttributeToCurrentElement);
+                SerializeDictionary((IDictionary)value, typeArgs[0], typeArgs[1], propertyInfo, propertyName, comparerType, writeAttributeToCurrentElement);
             } else if (typeof(IList).IsAssignableFrom(typedef) ||
                        typeof(IList<>).IsAssignableFrom(typedef) ||
                        typeof(ICollection).IsAssignableFrom(typedef) ||
                        typeof(ICollection<>).IsAssignableFrom(typedef)) {
                 propertyType = typeArgs[0];
                 propertyTypeName = propertyType.Name;
-                SerializeListProperty(writer, (IList)value, propertyInfo, propertyName, propertyTypeName, propertyType, propertyType.IsInterface || propertyType.IsAbstract, writeAttributeToCurrentElement);
+                SerializeListProperty((IList)value, propertyInfo, propertyName, propertyTypeName, propertyType, propertyType.IsInterface || propertyType.IsAbstract, writeAttributeToCurrentElement);
 
             } else {
                 if (Debugger.IsAttached) {
@@ -283,7 +322,6 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// Serializes the value as a Dictionary.
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="value">The dictionary that is serialized.</param>
         /// <param name="keyType">The type of the key.</param>
         /// <param name="valueType">The type of the value.</param>
@@ -292,73 +330,71 @@ namespace LazyApiPack.XmlTools {
         /// <param name="equalityComparer">If the DictionaryEqualityComparerAttribute is present, this type will be stored with the dictionary element.</param>
         /// <exception cref="ExtendedXmlSerializationException">If the generic type is not supported.</exception>
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
-        private void SerializeDictionary(XmlWriter writer, IDictionary value, Type keyType, Type valueType, SerializablePropertyInfo propertyInfo, string propertyName, Type? equalityComparer, Action<XmlWriter>? writeAttributeToCurrentElement) {
-            writer.WriteStartElement(propertyName);
-            writer.WriteAttributeString("keyType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", keyType.FullName);
-            writer.WriteAttributeString("valueType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", valueType.FullName);
+        private void SerializeDictionary(IDictionary value, Type keyType, Type valueType, SerializablePropertyInfo propertyInfo, string propertyName, Type? equalityComparer, Action? writeAttributeToCurrentElement) {
+            _writer.WriteStartElement(propertyName);
+            _writer.WriteAttributeString("keyType", LZYNS, keyType.FullName);
+            _writer.WriteAttributeString("valueType", LZYNS, valueType.FullName);
             if (equalityComparer != null) {
-                writer.WriteAttributeString("comparerType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", equalityComparer.FullName);
+                _writer.WriteAttributeString("comparerType", LZYNS, equalityComparer.FullName);
             }
 
-            writeAttributeToCurrentElement?.Invoke(writer);
+            writeAttributeToCurrentElement?.Invoke();
             foreach (DictionaryEntry item in value) {
-                writer.WriteStartElement("Item");
-                SerializeProperty(writer, propertyInfo, item.Key, "Key", keyType.FullName ?? keyType.Name, keyType, keyType.IsInterface || keyType.IsAbstract, null);
+                _writer.WriteStartElement("Item");
+                SerializeProperty(propertyInfo, item.Key, "Key", keyType.FullName ?? keyType.Name, keyType, keyType.IsInterface || keyType.IsAbstract, null);
 
-                SerializeProperty(writer, propertyInfo, item.Value, "Value", valueType.FullName ?? keyType.Name, valueType, valueType.IsInterface || valueType.IsAbstract, null);
-                writer.WriteEndElement();
+                SerializeProperty(propertyInfo, item.Value, "Value", valueType.FullName ?? keyType.Name, valueType, valueType.IsInterface || valueType.IsAbstract, null);
+                _writer.WriteEndElement();
             }
 
-            writer.WriteEndElement();
+            _writer.WriteEndElement();
         }
 
         /// <summary>
         /// Serializes the value as an IList.
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="value">The List that is serialized.</param>
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="propertyTypeName">Full name of the property type.</param>
         /// <param name="propertyType">The type of the property.</param>
-        /// <param name="isAbstractOrInterface">If the class is abstract or an interface, the clsType attribute is set to make the object deserializable.</param>
+        /// <param name="includeObjectNamespace">Speficies, if the clsClass attribute is written to the xml.</param>
         /// <param name="propertyInfo">Property info representing value.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
-        private void SerializeListProperty(XmlWriter writer, IList value, SerializablePropertyInfo propertyInfo, string propertyName, string propertyTypeName, Type propertyType, bool isAbstractOrInterface, Action<XmlWriter>? writeAttributeToCurrentElement) {
-            writer.WriteStartElement(propertyName);
-            writeAttributeToCurrentElement?.Invoke(writer);
+        private void SerializeListProperty(IList value, SerializablePropertyInfo propertyInfo, string propertyName, string propertyTypeName, Type propertyType, bool includeObjectNamespace, Action? writeAttributeToCurrentElement) {
+            _writer.WriteStartElement(propertyName);
+            writeAttributeToCurrentElement?.Invoke();
             foreach (var item in value) {
-                SerializeProperty(writer, propertyInfo, item, propertyInfo.ArrayPropertyItemName, propertyTypeName, propertyType, isAbstractOrInterface, null);
+                SerializeProperty(propertyInfo, item, propertyInfo.ArrayPropertyItemName, propertyTypeName, propertyType, includeObjectNamespace, null);
             }
-            writer.WriteEndElement();
+            _writer.WriteEndElement();
         }
 
         /// <summary>
         /// Serializes the value as a value type.
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="value">The value type that is serialized.</param>
         /// <param name="propertyInfo">Property info representing value.</param>
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
-        private void SerializeValueType(XmlWriter writer, object value, SerializablePropertyInfo propertyInfo, string propertyName, Action<XmlWriter>? writeAttributeToCurrentElement) {
+        private void SerializeValueType(object value, SerializablePropertyInfo propertyInfo, string propertyName, Action? writeAttributeToCurrentElement) {
             if (SerializationHelper.TrySerializeSimpleType(value, out string? serializedSimpleType, out string? serializedSimpleTypeDataType, CultureInfo, DateTimeFormat)) {
                 if (propertyInfo.IsXmlAttribute) {
-                    writeAttributeToCurrentElement?.Invoke(writer);
-                    writer.WriteAttributeString(propertyName, serializedSimpleType);
+                    writeAttributeToCurrentElement?.Invoke();
+                    _writer.WriteAttributeString(propertyName, serializedSimpleType);
                 } else {
-                    writer.WriteStartElement(propertyName);
-                    writeAttributeToCurrentElement?.Invoke(writer);
-                    writer.WriteValue(serializedSimpleType);
-                    writer.WriteEndElement();
+                    _writer.WriteStartElement(propertyName);
+                    writeAttributeToCurrentElement?.Invoke();
+                    _writer.WriteValue(serializedSimpleType);
+                    _writer.WriteEndElement();
                 }
             } else {
                 var propCi = new SerializableClassInfo(value, CultureInfo, DateTimeFormat, null, EnableRecursiveSerialization);
                 if (propCi.SerializableClassAttribute != null) {
-                    SerializeClass(writer, propCi, false, propertyName);
+                    SerializeClass(propCi, false, propertyName);
                 } else {
-                    SerializePropertyExternal(writer, propCi.Object, propertyInfo.IsXmlAttribute, propertyName, propCi.ClassType);
+                    SerializePropertyExternal(propCi.Object, propertyInfo.IsXmlAttribute, propertyName, propCi.ClassType);
                 }
             }
         }
@@ -366,29 +402,28 @@ namespace LazyApiPack.XmlTools {
         /// <summary>
         /// Serializes a value that is not known to the serializer but to an IExternalObjectSerializer
         /// </summary>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
         /// <param name="value">The value type that is serialized.</param>
         /// <param name="serializeAsAttribute">Is true if the XmlWriter is in WriteAttribute mode - creating an element is not possible.</param>
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="propertyType">The type of the property.</param>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private void SerializePropertyExternal(XmlWriter writer, object value, bool serializeAsAttribute, string propertyName, Type propertyType) {
+        private void SerializePropertyExternal(object value, bool serializeAsAttribute, string propertyName, Type propertyType) {
             var serializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(propertyType));
             if (serializer != null) {
                 if (serializeAsAttribute) {
-                    writer.WriteStartAttribute(propertyName);
+                    _writer.WriteStartAttribute(propertyName);
                 } else {
-                    writer.WriteStartElement(propertyName);
+                    _writer.WriteStartElement(propertyName);
                 }
 
-                if (!serializer.Serialize(writer, value, serializeAsAttribute,
+                if (!serializer.Serialize(_writer, value, serializeAsAttribute,
                                           CultureInfo, DateTimeFormat, EnableRecursiveSerialization)) {
                     throw new ExtendedXmlSerializationException($"Cannot serialize type {propertyType.FullName} with value {value}.");
                 }
                 if (serializeAsAttribute) {
-                    writer.WriteEndAttribute();
+                    _writer.WriteEndAttribute();
                 } else {
-                    writer.WriteEndElement();
+                    _writer.WriteEndElement();
                 }
             } else {
                 throw new ExtendedXmlSerializationException($"There is not serializer that supports the type {propertyType.FullName} to serialize the value {value}");
@@ -408,18 +443,49 @@ namespace LazyApiPack.XmlTools {
                 return int.MaxValue;
             }
         }
+        /// <summary>
+        /// Creates an instance of the XmlWriter with the default configuration.
+        /// </summary>
+        /// <param name="output">The stream which is used to write the xml to.</param>
+        /// <returns>The XmlWriter with the default configuration</returns>
+        private XmlWriter CreateXmlWriter(Stream output) {
+            return XmlWriter.Create(output,
+                new XmlWriterSettings() {
+                    Encoding = Encoding.UTF8,
+                    Indent = true
+                });
+        }
 
+        /// <summary>
+        /// Creates the root node of the xml with a header
+        /// </summary>
+        private void WriteRoot() {
+            _writer.WriteStartDocument();
+            _writer.WriteStartElement(_rootElementName);
+            _writer.WriteAttributeString("xmlns", "lzyxmlx", null, LZYNS);
+            var header = new ExtendedXmlHeader(AppName, AppVersion);
+            WriteHeader(header);
+        }
+
+        /// <summary>
+        /// Determines if an object is exactly the same type as the parameter type
+        /// </summary>
+        /// <param name="type">The expected type.</param>
+        /// <param name="object">The current object to compare with type.</param>
+        /// <returns>True, if the object is not null and the exact type.</returns>
+        bool IsExactType(Type type, object? @object) {
+            return @object != null && @object.GetType() == type;
+        }
 
         /// <summary>
         /// Writes the clsType attribute to the current element.
         /// </summary>
-        /// <param name="writer">Writer that is used.</param>
         /// <param name="classType">Type of the class.</param>
         /// <param name="writeAdditionalAttributesToCurrentElement">Additional attributes from parent.</param>
         /// <remarks>Uses the UseFullNamespace property.</remarks>
-        private void SetTypeAttribute(XmlWriter writer, Type classType, Action<XmlWriter>? writeAdditionalAttributesToCurrentElement) {
-            writer.WriteAttributeString("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0", GetTypeName(classType));
-            writeAdditionalAttributesToCurrentElement?.Invoke(writer);
+        private void SetTypeAttribute(Type classType, Action? writeAdditionalAttributesToCurrentElement) {
+            _writer.WriteAttributeString("clsType", LZYNS, GetTypeName(classType));
+            writeAdditionalAttributesToCurrentElement?.Invoke();
 
         }
     }

@@ -10,14 +10,17 @@
 		<Authors>Jodie Watson</Authors>
 		<Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
 		<PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
-		<AssemblyVersion>0.1.4.1</AssemblyVersion>
-		<FileVersion>0.1.4.1</FileVersion>
+		<AssemblyVersion>0.1.5</AssemblyVersion>
+		<FileVersion>0.1.5</FileVersion>
 		<Version>$(AssemblyVersion)</Version>
 		<PackageProjectUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools</PackageProjectUrl>
 		<PackageReadmeFile>ReadMe.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools.git</RepositoryUrl>
 		<PackageTags>xml;serializer;deserializer;recursive;nested;tool;wpf</PackageTags>
-		<PackageReleaseNotes>Introduces support for the XmlObsolete attribute that deserializes a property (For migration support) but does not serialize it back into xml again.</PackageReleaseNotes>
+		<PackageReleaseNotes>
+Introduces support to deserialize a list of classes directly.
+Adds support to deserialize a property of a type that does not exactly match the object its holding (eg. the property class type is used as a base class but not marked as abstract).
+</PackageReleaseNotes>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
 

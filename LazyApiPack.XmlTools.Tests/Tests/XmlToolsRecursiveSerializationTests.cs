@@ -1,4 +1,5 @@
 ﻿using LazyApiPack.XmlTools.Tests.Model;
+using NUnit.Framework.Constraints;
 using System.Text;
 
 namespace LazyApiPack.XmlTools.Tests.Tests {
@@ -25,8 +26,8 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
             Assert.NotNull(stream, "Returned stream is null.");
             Assert.NotZero(stream.Length, "Stream is empty");
             Assert.Zero(stream.Position);
-            var xml = ValidationHelper.GetXml(stream, Encoding.UTF8);
-            var doc = ValidationHelper.GetXDoc(stream);
+            //var xml = ValidationHelper.GetXml(stream, Encoding.UTF8);
+            //var doc = ValidationHelper.GetXDoc(stream);
 
 
             var deserialized = serializer.Deserialize(stream, false);

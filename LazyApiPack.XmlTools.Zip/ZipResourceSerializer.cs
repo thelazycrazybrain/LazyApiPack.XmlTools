@@ -7,6 +7,7 @@ namespace LazyApiPack.XmlTools.Zip {
         public ZipResourceSerializer([NotNull] ResourceManager resourceManager) {
             _resourceManager = resourceManager;
         }
+
         public object? Deserialize(string? value, Type type, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization) {
             if (value == null) return null;
             return new ZipResource(_resourceManager.GetResource(value));

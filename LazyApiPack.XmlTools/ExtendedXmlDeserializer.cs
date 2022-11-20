@@ -36,6 +36,44 @@ namespace LazyApiPack.XmlTools {
                 return Deserialize(fs, checkAppCompatibility);
             }
         }
+
+        private XElement LoadXml([NotNull] Stream sourceStream, bool checkAppCompatibility) {
+            var nsmgr = new XmlNamespaceManager(new NameTable());
+            nsmgr.AddNamespace("lzyxmlx", LZYNS);
+            var context = new XmlParserContext(null, nsmgr, null, XmlSpace.None);
+            var xset = new XmlReaderSettings() {
+                ConformanceLevel = ConformanceLevel.Fragment
+            };
+
+            var document = XDocument.Load(XmlReader.Create(sourceStream, xset, context), LoadOptions.None);
+            var root = document.Element(XName.Get(RootElementName)) ?? throw new ExtendedXmlSerializationException("Root element in xml not found.");
+            var headerElement = root.Nodes().OfType<XElement>().First(e => e.Name == XName.Get("Header"));
+            var header = GetHeader(headerElement);
+
+            if (checkAppCompatibility) {
+                if (header == null) {
+                    throw new ExtendedXmlSerializationException($"The header section in the xml was not found but the {nameof(checkAppCompatibility)} parameter was set to true.");
+                }
+
+                bool requiredMigration = VersionMismatch(header) != 0;
+                bool appNameMismatch = string.Compare(header.AppName, AppName) != 0;
+
+                // If version does not match, the update is required and the MigrateXmlDocument Handler must not be null
+                // If only the app name mismatches, the upgrade handler is invoked if it is there, otherwise the name mismatch
+                // is not treated as a problem.
+                if ((requiredMigration && MigrateXmlDocument == null) ||
+                    ((appNameMismatch || requiredMigration) &&
+                    MigrateXmlDocument?.Invoke(this, header.AppName, AppName, header.AppVersion, AppVersion, document) != true
+                    )) {
+                    throw new ExtendedXmlFileException(
+@$"File can not be deserialized.
+Either the xml version {header.AppVersion} does not match the app version {AppVersion} and the MigrateXmlDocument event is not handled, or the MigrateXmlDocument migration has failed.");
+
+                }
+            }
+            return root;
+        }
+
         /// <summary>
         /// Deserializes a class from an xml stream.
         /// </summary>
@@ -44,48 +82,37 @@ namespace LazyApiPack.XmlTools {
         public TClass Deserialize([NotNull] Stream sourceStream, bool checkAppCompatibility = false) {
             if (sourceStream == null) throw new ArgumentNullException(nameof(sourceStream));
             var pos = sourceStream.Position;
-
             try {
+                var root = LoadXml(sourceStream, checkAppCompatibility);
+                var rootNode = root.Nodes().OfType<XElement>().Skip(1).First();
 
-                var nsmgr = new XmlNamespaceManager(new NameTable());
-                nsmgr.AddNamespace("lzyxmlx", "http://www.jodiewatson.net/xml/lzyxmlx/1.0");
-                var context = new XmlParserContext(null, nsmgr, null, XmlSpace.None);
-                var xset = new XmlReaderSettings() {
-                    ConformanceLevel = ConformanceLevel.Fragment
-                };
+                return (TClass)DeserializeClass(rootNode, typeof(TClass));
 
-                var document = XDocument.Load(XmlReader.Create(sourceStream, xset, context), LoadOptions.None);
-                var root = document.Element(XName.Get(RootElementName)) ?? throw new ExtendedXmlSerializationException("Root element in xml not found.");
-                var headerElement = root.Nodes().OfType<XElement>().First(e => e.Name == XName.Get("Header"));
-                var header = GetHeader(headerElement);
-
-                if (checkAppCompatibility) {
-                    if (header == null) {
-                        throw new ExtendedXmlSerializationException($"The header section in the xml was not found but the {nameof(checkAppCompatibility)} parameter was set to true.");
-                    }
-
-                    bool requiredMigration = VersionMismatch(header) != 0;
-                    bool appNameMismatch = string.Compare(header.AppName, AppName) != 0;
-
-                    // If version does not match, the update is required and the MigrateXmlDocument Handler must not be null
-                    // If only the app name mismatches, the upgrade handler is invoked if it is there, otherwise the name mismatch
-                    // is not treated as a problem.
-                    if ((requiredMigration && MigrateXmlDocument == null) ||
-                        ((appNameMismatch || requiredMigration) &&
-                        MigrateXmlDocument?.Invoke(this, header.AppName, AppName, header.AppVersion, AppVersion, document) != true
-                        )) {
-                        throw new ExtendedXmlFileException(
-@$"File can not be deserialized.
-Either the xml version {header.AppVersion} does not match the app version {AppVersion} and the MigrateXmlDocument event is not handled, or the MigrateXmlDocument migration has failed.");
-
-                    }
+            }
+            finally {
+                ClearSerializationCache();
+                if (sourceStream.CanSeek) {
+                    sourceStream.Position = pos;
                 }
+            }
+        }
 
-                var rootType = GetType().GetGenericArguments()[0];
-                var att = rootType.GetCustomAttribute<XmlClassAttribute>();
-                var className = att?.CustomName ?? rootType.Name;
-                var contents = root.Nodes().OfType<XElement>().First(e => e.Name == XName.Get(className));
-                return (TClass)DeserializeClass(contents, rootType);
+        /// <summary>
+        /// Deserializes a class from an xml stream.
+        /// </summary>
+        /// <param name="checkAppCompatibility">If true, the serializer checks the application compatibility for migration.</param>
+        /// <returns>The object that has been deserialized from the given xml stream.</returns>
+        public IEnumerable<TClass> DeserializeAll([NotNull] Stream sourceStream, bool checkAppCompatibility = false) {
+            if (sourceStream == null) throw new ArgumentNullException(nameof(sourceStream));
+            var pos = sourceStream.Position;
+            try {
+                var root = LoadXml(sourceStream, checkAppCompatibility);
+                var rootNodes = root.Nodes().OfType<XElement>().Skip(1);
+                List<TClass> result = new List<TClass>();
+                foreach (var rootNode in rootNodes) {
+                    result.Add((TClass)DeserializeClass(rootNode, typeof(TClass)));
+                }
+                return result;
 
             }
             finally {
@@ -105,14 +132,17 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         private object DeserializeClass(XElement objectNode, Type objectType) {
             string? id = null;
+            var attType = GetTypeFromAttribute(objectNode);
+            if (attType != null) {
+                objectType = GetCachedType(attType, objectType.Namespace);
+            }
+
+            if (objectType == null) throw new InvalidOperationException($"Class Type was not found in xml.");
+
             if (EnableRecursiveSerialization) {
-                id = objectNode.Attribute(XName.Get("objId", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value
+                id = objectNode.Attribute(XName.Get("objId", LZYNS))?.Value
                     ?? throw new NullReferenceException($"Id of {objectType.FullName} can not be null because recursive serialization is enabled.");
 
-                if (objectType.IsAbstract || objectType.IsInterface) {
-                    var attType = GetTypeFromAttribute(objectNode) ?? throw new InvalidOperationException($"Class Type was not found in xml for {objectType.FullName}.");
-                    objectType = GetCachedType(attType, objectType.Namespace);
-                }
             }
 
             var deserializedClass = _deserializedObjects.FirstOrDefault(c => c.Type == objectType.FullName && c.Id == id);
@@ -174,7 +204,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
         }
 
         private string? GetTypeFromAttribute([NotNull] XElement objectNode) {
-            return objectNode.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value;
+            return objectNode.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", LZYNS))?.Value;
         }
 
         /// <summary>
@@ -240,10 +270,10 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
         /// <returns>The deserialized array.</returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         private object? DeserializeArray(XElement objectNode, Type objectType, object? createdOnConstruction) {
-            var rank = objectNode.Attribute(XName.Get("rankDescriptor", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value;
+            var rank = objectNode.Attribute(XName.Get("rankDescriptor", LZYNS))?.Value;
 
             if (rank == null) {
-                if (objectNode.Attribute(XName.Get("format", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value == "Base64") {
+                if (objectNode.Attribute(XName.Get("format", LZYNS))?.Value == "Base64") {
                     return DeserializeBinary(objectNode);
                 } else {
                     throw new ExtendedXmlSerializationException($"Cannot deserialize array {objectNode.Name} of type {objectType.FullName} because no rank descriptor was found and no format descriptor to deserialize");
@@ -264,7 +294,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
             var items = objectNode.Elements();
             var descriptor = new SerializableArray(array);
             while (descriptor.MoveNext()) {
-                var node = items.FirstOrDefault(i => i.Attribute(XName.Get("index", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"))?.Value == descriptor.CurrentIndexString);
+                var node = items.FirstOrDefault(i => i.Attribute(XName.Get("index", LZYNS))?.Value == descriptor.CurrentIndexString);
 
 
                 if (node != null) {
@@ -371,7 +401,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
                 // TODO: CreatedOnConstruction is not of type IList
 
                 foreach (var element in objectNode.Elements().ToList()) {
-                    var attType = element.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", "http://www.jodiewatson.net/xml/lzyxmlx/1.0"));
+                    var attType = element.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", LZYNS));
                     var currentItemType = itemType;
                     if (attType != null) {
                         currentItemType = GetCachedType(attType.Value, itemType.Namespace);

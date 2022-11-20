@@ -34,6 +34,10 @@ namespace LazyApiPack.XmlTools.Tests.Model {
             get => _children;
             set => SetPropertyValue(ref _children, value);
         }
+
+        public override string ToString() {
+            return Name; // Do not try to show Children here -> infinite recursion!
+        }
     }
 
 }

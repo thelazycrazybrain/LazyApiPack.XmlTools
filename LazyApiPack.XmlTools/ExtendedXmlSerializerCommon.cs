@@ -11,6 +11,7 @@ using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools {
     public partial class ExtendedXmlSerializer<TClass> where TClass : class {
+        public const string LZYNS = "http://www.jodiewatson.net/xml/lzyxmlx/1.0";
         private ExtendedXmlSerializer() {
             _serializedObjects = new List<SerializableClassInfo>();
             _deserializedObjects = new List<SerializedClassContainer>();
@@ -180,12 +181,11 @@ namespace LazyApiPack.XmlTools {
         /// Writes the xml header that is needed for xml migration
         /// </summary>
         /// <param name="header">Header that is written to the xml.</param>
-        /// <param name="writer">Xml writer that is used for the serialization.</param>
-        private void WriteHeader(ExtendedXmlHeader header, XmlWriter writer) {
-            writer.WriteStartElement("Header");
-            writer.WriteAttributeString("AppName", header.AppName);
-            writer.WriteAttributeString("AppVersion", header.AppVersion.ToString(4));
-            writer.WriteEndElement();
+        private void WriteHeader(ExtendedXmlHeader header) {
+            _writer.WriteStartElement("Header");
+            _writer.WriteAttributeString("AppName", header.AppName);
+            _writer.WriteAttributeString("AppVersion", header.AppVersion.ToString(4));
+            _writer.WriteEndElement();
         }
 
 

@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 namespace LazyApiPack.XmlTools.Zip {
     public class ResourceManager {
         private ZipArchive _archive;
-        private SHA256 _sha256;
+        private SHA256 _sha256 = SHA256.Create();
         /// <summary>
         /// If a zip resource was given but the data was empty.
         /// </summary>
@@ -20,9 +20,6 @@ namespace LazyApiPack.XmlTools.Zip {
         public ResourceManager(bool checkDuplicates, ZipArchive archive, CompressionLevel compressionLevel) {
             CheckDuplicates = checkDuplicates;
             CompressionLevel = compressionLevel;
-            if (CheckDuplicates) {
-                _sha256 =  SHA256.Create();
-            }
             _archive = archive;
             _dataDictionary = new Dictionary<byte[], string>(new ByteArrayComparer());
 

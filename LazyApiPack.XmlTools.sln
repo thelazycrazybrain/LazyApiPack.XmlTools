@@ -9,11 +9,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LazyApiPack.XmlTools.Wpf", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LazyApiPack.XmlTools.Tests", "LazyApiPack.XmlTools.Tests\LazyApiPack.XmlTools.Tests.csproj", "{38BDDC59-B8F1-40E7-89E5-FA37CB72F9F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LazyApiPack.XmlTools.Zip", "LazyApiPack.XmlTools.Zip\LazyApiPack.XmlTools.Zip.csproj", "{B6D65FB7-08A5-485C-A6B5-FB7D74B5DD01}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LazyApiPack.XmlTools.Zip", "LazyApiPack.XmlTools.Zip\LazyApiPack.XmlTools.Zip.csproj", "{B6D65FB7-08A5-485C-A6B5-FB7D74B5DD01}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{B5E6DA1C-9E44-46FC-8821-882B5D1326D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LazyApiPack.XmlTools.Zip.Tests", "LazyApiPack.XmlTools.Zip.Tests\LazyApiPack.XmlTools.Zip.Tests.csproj", "{D33DFB5B-5517-4B4D-8F10-AE1A19DE852A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LazyApiPack.XmlTools.Zip.Tests", "LazyApiPack.XmlTools.Zip.Tests\LazyApiPack.XmlTools.Zip.Tests.csproj", "{D33DFB5B-5517-4B4D-8F10-AE1A19DE852A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LazyApiPack.XmlTools.Wpf.Tests", "LazyApiPack.XmlTools.Wpf.Tests\LazyApiPack.XmlTools.Wpf.Tests.csproj", "{36640ACA-68ED-4C5C-9B98-EDA10DBA4BE1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +43,10 @@ Global
 		{D33DFB5B-5517-4B4D-8F10-AE1A19DE852A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D33DFB5B-5517-4B4D-8F10-AE1A19DE852A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D33DFB5B-5517-4B4D-8F10-AE1A19DE852A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36640ACA-68ED-4C5C-9B98-EDA10DBA4BE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36640ACA-68ED-4C5C-9B98-EDA10DBA4BE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36640ACA-68ED-4C5C-9B98-EDA10DBA4BE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36640ACA-68ED-4C5C-9B98-EDA10DBA4BE1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,6 +54,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{38BDDC59-B8F1-40E7-89E5-FA37CB72F9F8} = {B5E6DA1C-9E44-46FC-8821-882B5D1326D8}
 		{D33DFB5B-5517-4B4D-8F10-AE1A19DE852A} = {B5E6DA1C-9E44-46FC-8821-882B5D1326D8}
+		{36640ACA-68ED-4C5C-9B98-EDA10DBA4BE1} = {B5E6DA1C-9E44-46FC-8821-882B5D1326D8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8C7E6365-FEC4-444F-B499-9FE6B4D2706E}

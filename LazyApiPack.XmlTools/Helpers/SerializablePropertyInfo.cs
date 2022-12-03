@@ -36,8 +36,7 @@ namespace LazyApiPack.XmlTools.Helpers {
         /// </summary>
         /// <returns>Either the name that was specified with the XmlPropertyAttribute, the XmlElementAttribute, the XmlArrayAttribute, the XmlAttributeAttribute or the name of the property itself.</returns>
         private string GetCustomPropertyName() {
-
-            string customName = null;
+            string? customName = null;
             if (PropertyInfo.GetCustomAttribute<XmlPropertyAttribute>() is XmlPropertyAttribute pa) {
                 customName = pa.CustomName;
             } else if (PropertyInfo.GetCustomAttribute<XmlElementAttribute>() is XmlElementAttribute ea) {
@@ -48,11 +47,8 @@ namespace LazyApiPack.XmlTools.Helpers {
                 customName = xaa.AttributeName;
             }
 
-            if (string.IsNullOrWhiteSpace(customName)) {
-                customName = PropertyInfo.Name;
-            }
-
-            return customName;
+            return string.IsNullOrWhiteSpace(customName) ? PropertyInfo.Name : customName;
+          
         }
 
         /// <summary>

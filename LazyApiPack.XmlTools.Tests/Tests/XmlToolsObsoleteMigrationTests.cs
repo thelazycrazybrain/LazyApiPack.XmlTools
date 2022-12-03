@@ -32,11 +32,11 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
 
             var serialized = serializer.Serialize(deserialized);
             var doc = ValidationHelper.GetXDoc(serialized);
-            var obsoleteModelNode = doc.Element("ExtendedSerializedObjectFile")
-                                       .Element("ObsoleteModel")
-                                       .Elements();
-            Assert.True(obsoleteModelNode.Any(x => x.Name == "intValue"));
-            Assert.False(obsoleteModelNode.Any(x => x.Name == "value"));
+            var obsoleteModelNode = doc?.Element("ExtendedSerializedObjectFile")
+                                       ?.Element("ObsoleteModel")
+                                       ?.Elements();
+            Assert.True(obsoleteModelNode?.Any(x => x.Name == "intValue"));
+            Assert.False(obsoleteModelNode?.Any(x => x.Name == "value"));
 
 
 

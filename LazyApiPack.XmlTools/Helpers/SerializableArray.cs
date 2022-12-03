@@ -61,7 +61,7 @@ namespace LazyApiPack.XmlTools.Helpers {
         /// The current index as a ; separated string (Multiple array dimensions).
         /// </summary>
         /// <returns>The current index as a ; separated string (Multiple array dimensions).</returns>
-        public string CurrentIndexString
+        public string? CurrentIndexString
         {
             get
             {

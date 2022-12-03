@@ -22,6 +22,6 @@
         /// <summary>
         /// The name of this property or field used in the xml.
         /// </summary>
-        public string CustomName { get; set; }
+        public string? CustomName { get; set; }
     }
 }

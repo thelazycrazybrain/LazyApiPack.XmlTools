@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml;
+using System.Xml.Serialization;
 
 namespace LazyApiPack.XmlTools {
     /// <summary>
@@ -29,11 +30,10 @@ namespace LazyApiPack.XmlTools {
         /// <param name="sourceClass">The class to serialize.</param>
         /// <param name="fileName">The fully qualified file name for the xml.</param>
         public void Serialize([NotNull] TClass sourceClass, string fileName) {
-            using (var serialized = Serialize(sourceClass))
-            using (var fs = File.OpenWrite(fileName)) {
-                fs.SetLength(serialized.Length);
-                serialized.CopyTo(fs);
-            }
+            using var serialized = Serialize(sourceClass);
+            using var fs = File.OpenWrite(fileName);
+            fs.SetLength(serialized.Length);
+            serialized.CopyTo(fs);
         }
 
         /// <summary>
@@ -42,11 +42,10 @@ namespace LazyApiPack.XmlTools {
         /// <param name="sourceClasses">List of classes to serialize.</param>
         /// <param name="fileName">The fully qualified file name for the xml.</param>
         public void SerializeAll([NotNull] IEnumerable<TClass> sourceClasses, string fileName) {
-            using (var serialized = SerializeAll(sourceClasses))
-            using (var fs = File.OpenWrite(fileName)) {
-                fs.SetLength(serialized.Length);
-                serialized.CopyTo(fs);
-            }
+            using var serialized = SerializeAll(sourceClasses);
+            using var fs = File.OpenWrite(fileName);
+            fs.SetLength(serialized.Length);
+            serialized.CopyTo(fs);
         }
 
 
@@ -84,8 +83,7 @@ namespace LazyApiPack.XmlTools {
                 }
                 targetStream.Position = 0;
                 return targetStream;
-            }
-            finally {
+            } finally {
                 ClearSerializationCache();
             }
         }
@@ -126,8 +124,7 @@ namespace LazyApiPack.XmlTools {
                 }
                 targetStream.Position = 0;
                 return targetStream;
-            }
-            finally {
+            } finally {
                 ClearSerializationCache();
             }
         }
@@ -198,9 +195,12 @@ namespace LazyApiPack.XmlTools {
                                        bool includeObjectNamespace, Action? writeAttributeToCurrentElement) {
             if (value == null) return; // Do not serialize null values
 
+            if (SerializePropertyExternal(value, propertyInfo.IsXmlAttribute, propertyName, value.GetType())) {
+                return;
+            }
+
             if (propertyType.IsArray) {
                 if (propertyType.GetElementType() == typeof(byte) && propertyType.GetArrayRank() == 1) {
-                    // Exception: Byte arrays will be stored as base64 blobs
                     SerializeBinary((byte[])value, propertyName, writeAttributeToCurrentElement);
                 } else {
                     SerializeArrayProperty(value, propertyInfo, propertyName, writeAttributeToCurrentElement);
@@ -208,23 +208,21 @@ namespace LazyApiPack.XmlTools {
             } else if (propertyType.IsGenericType) {
                 SerializeGenericProperty(value, propertyInfo, propertyName, propertyTypeName, propertyType,
                     () => SetTypeAttribute(propertyType.IsGenericType ? value.GetType() : propertyType, writeAttributeToCurrentElement));
-            } else if (propertyType.IsEnum) {
-                SerializeEnumProperty((Enum)value, propertyName, writeAttributeToCurrentElement);
-            } else if (IsValueType(propertyType)) {
-                SerializeValueType(value, propertyInfo, propertyName, writeAttributeToCurrentElement);
+            } else if (IsSimpleType(propertyType)) {
+                SerializeSimpleType(value, propertyInfo, propertyName, writeAttributeToCurrentElement);
             } else {
                 // Is Class
                 var propCi = new SerializableClassInfo(value, CultureInfo, DateTimeFormat, null, EnableRecursiveSerialization);
                 if (propCi.SerializableClassAttribute != null) {
                     SerializeClass(propCi, !IsExactType(propCi.ClassType, value) || includeObjectNamespace, propertyName);
                 } else {
-                    SerializePropertyExternal(propCi.Object, propertyInfo.IsXmlAttribute, propertyName, propCi.ClassType);
+                    throw new ExtendedXmlSerializationException($"There is not serializer that supports the type {propertyType.FullName} to serialize the value {value}");
                 }
-
             }
+
         }
 
-        
+
         /// <summary>
         /// Serializes the value as base64.
         /// </summary>
@@ -236,19 +234,6 @@ namespace LazyApiPack.XmlTools {
             writeAttributeToCurrentElement?.Invoke();
             _writer.WriteAttributeString("format", LZYNS, "Base64");
             _writer.WriteValue(Convert.ToBase64String(value));
-            _writer.WriteEndElement();
-        }
-
-        /// <summary>
-        /// Serializes the value as an enum value to the xml
-        /// </summary>
-        /// <param name="value">Enum that is serialized.</param>
-        /// <param name="propertyName">Name of the property.</param>
-        /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
-        private void SerializeEnumProperty(Enum value, string propertyName, Action? writeAttributeToCurrentElement) {
-            _writer.WriteStartElement(propertyName);
-            writeAttributeToCurrentElement?.Invoke();
-            _writer.WriteValue(value.ToString());
             _writer.WriteEndElement();
         }
 
@@ -378,7 +363,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="writeAttributeToCurrentElement">Is called after an element is created. The caller can attach custom attributes (eg. Item-Index, Item-Key) to the created element.</param>
         /// <remarks >The value, names etc. can be different from propertyInfo.</remarks>
-        private void SerializeValueType(object value, SerializablePropertyInfo propertyInfo, string propertyName, Action? writeAttributeToCurrentElement) {
+        private void SerializeSimpleType(object value, SerializablePropertyInfo propertyInfo, string propertyName, Action? writeAttributeToCurrentElement) {
             if (SerializationHelper.TrySerializeSimpleType(value, out string? serializedSimpleType, out string? serializedSimpleTypeDataType, CultureInfo, DateTimeFormat)) {
                 if (propertyInfo.IsXmlAttribute) {
                     writeAttributeToCurrentElement?.Invoke();
@@ -394,7 +379,7 @@ namespace LazyApiPack.XmlTools {
                 if (propCi.SerializableClassAttribute != null) {
                     SerializeClass(propCi, false, propertyName);
                 } else {
-                    SerializePropertyExternal(propCi.Object, propertyInfo.IsXmlAttribute, propertyName, propCi.ClassType);
+                    throw new ExtendedXmlSerializationException($"Cannot serialize type {value.GetType().FullName} with value {value}.");
                 }
             }
         }
@@ -407,27 +392,37 @@ namespace LazyApiPack.XmlTools {
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="propertyType">The type of the property.</param>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private void SerializePropertyExternal(object value, bool serializeAsAttribute, string propertyName, Type propertyType) {
-            var serializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(propertyType));
-            if (serializer != null) {
-                if (serializeAsAttribute) {
-                    _writer.WriteStartAttribute(propertyName);
-                } else {
-                    _writer.WriteStartElement(propertyName);
-                }
-
-                if (!serializer.Serialize(_writer, value, serializeAsAttribute,
-                                          CultureInfo, DateTimeFormat, EnableRecursiveSerialization)) {
-                    throw new ExtendedXmlSerializationException($"Cannot serialize type {propertyType.FullName} with value {value}.");
-                }
-                if (serializeAsAttribute) {
-                    _writer.WriteEndAttribute();
-                } else {
-                    _writer.WriteEndElement();
-                }
-            } else {
-                throw new ExtendedXmlSerializationException($"There is not serializer that supports the type {propertyType.FullName} to serialize the value {value}");
+        private bool SerializePropertyExternal(object value, bool serializeAsAttribute, string propertyName, Type propertyType) {
+            var externalSerializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(propertyType, null));
+            if (externalSerializer == null) {
+                return false;
             }
+
+            if (serializeAsAttribute) {
+                _writer.WriteStartAttribute(propertyName);
+            } else {
+                _writer.WriteStartElement(propertyName);
+            }
+
+            if (!externalSerializer.Serialize(_writer, value, serializeAsAttribute, CultureInfo, DateTimeFormat,
+                EnableRecursiveSerialization, 
+                    (dataFormat) => {
+                        if (serializeAsAttribute) {
+                            throw new NotSupportedException($"Byte[] can not be serialized as attribute. Use {nameof(XmlPropertyAttribute)} or {nameof(XmlElementAttribute)} instead.");
+                        }
+                        _writer.WriteAttributeString("format", ExtendedXmlSerializer.LZYNS, dataFormat);
+                    }
+            )) {
+                throw new ExtendedXmlSerializationException($"Cannot serialize type {propertyType.FullName} with value {value}.");
+            }
+
+            if (serializeAsAttribute) {
+                _writer.WriteEndAttribute();
+            } else {
+                _writer.WriteEndElement();
+            }
+            return true;
+
         }
 
         /// <summary>

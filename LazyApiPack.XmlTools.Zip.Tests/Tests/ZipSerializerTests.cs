@@ -10,13 +10,13 @@ namespace LazyApiPack.XmlTools.Zip.Tests.Tests {
         [SetUp]
         public void Setup() {
             _model = new ImageModel();
-            _model.Images.Add(new ZipResource(ValidationHelper.GetResource("Sample1.jpg")));
-            _model.Images.Add(new ZipResource(ValidationHelper.GetResource("Sample2.jpg")));
-            _model.Images.Add(new ZipResource(ValidationHelper.GetResource("Sample3.jpg")));
-            _model.Images.Add(new ZipResource(ValidationHelper.GetResource("Sample4.jpg")));
-            _model.Images.Add(new ZipResource(ValidationHelper.GetResource("Sample1.jpg")));
+            _model.Images.Add(new ZipResource(ZipValidationHelper.GetResource("Sample1.jpg")));
+            _model.Images.Add(new ZipResource(ZipValidationHelper.GetResource("Sample2.jpg")));
+            _model.Images.Add(new ZipResource(ZipValidationHelper.GetResource("Sample3.jpg")));
+            _model.Images.Add(new ZipResource(ZipValidationHelper.GetResource("Sample4.jpg")));
+            _model.Images.Add(new ZipResource(ZipValidationHelper.GetResource("Sample1.jpg")));
 
-            _model.MainImage = new ZipResource(ValidationHelper.GetResource("Sample4.jpg"));
+            _model.MainImage = new ZipResource(ZipValidationHelper.GetResource("Sample4.jpg"));
         }
 
         [Test]

@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 
 namespace LazyApiPack.XmlTools.Zip {
     public class ByteArrayComparer : IEqualityComparer<byte[]> {
-        public bool Equals(byte[] left, byte[] right) {
+        public bool Equals(byte[]? left, byte[]? right) {
             if (left == null || right == null) {
                 return left == right;
             }

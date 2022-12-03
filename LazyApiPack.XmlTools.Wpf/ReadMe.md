@@ -20,3 +20,23 @@ var model = new ExtendedXmlSerializer<SimpleDataModel>()
 	.Deserialize("[PathToFile]");
 
 ```
+
+# Supported Types
+- PointCollection
+- Point
+- Brush
+- Color
+- StrokeCollection
+- Thickness
+- BitmapImage
+- Rect
+- DrawingAttributes
+- StylusPointCollection
+- TextDecoration
+- Pen
+- DashStyle
+- MatrixTransform
+- RotateTransform
+- ScaleTransform
+- SkewTransform
+- TranslateTransform

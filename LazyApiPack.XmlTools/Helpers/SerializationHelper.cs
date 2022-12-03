@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -42,6 +43,10 @@ namespace LazyApiPack.XmlTools.Helpers {
                 case Guid g:
                     serialized = g.ToString("", cultureInfo);
                     dataType = "Guid";
+                    break;
+                case Enum e:
+                    serialized = e.ToString();
+                    dataType = "Enum";
                     break;
                 case Version v:
                     serialized = v?.ToString(4);
@@ -136,9 +141,17 @@ namespace LazyApiPack.XmlTools.Helpers {
         /// <param name="format">The format that is used to parse the value string.</param>
         /// <param name="dateTimeFormat">The dateTime format that is used to parse the value string.</param>
         /// <returns>True, if the value was deserialized, otherwise false.</returns>
-        public static bool TryDeserializeValueType(Type objectType, string value, out object simpleValue, IFormatProvider format, string? dateTimeFormat) {
+        public static bool TryDeserializeValueType(Type objectType, string value, out object? simpleValue, IFormatProvider format, string? dateTimeFormat) {
             if (objectType == typeof(string)) {
                 simpleValue = value;
+                return true;
+            } else if (objectType.IsAssignableTo(typeof(Enum))) {
+                if (string.IsNullOrWhiteSpace(value)) {
+                    simpleValue = Activator.CreateInstance(objectType) ?? 
+                        throw new NullReferenceException($"Can not create instance of {objectType.FullName}.");
+                } else {
+                    simpleValue = Enum.Parse(objectType, value);
+                }
                 return true;
             } else if (objectType == typeof(Guid)) {
                 simpleValue = Guid.Parse(value);
@@ -196,7 +209,7 @@ namespace LazyApiPack.XmlTools.Helpers {
                 simpleValue = TimeSpan.FromMilliseconds(double.Parse(value, format));
             } else if (objectType == typeof(Version)) {
                 simpleValue = Version.Parse(value);
-            } else { 
+            } else {
                 simpleValue = null;
                 return false;
             }

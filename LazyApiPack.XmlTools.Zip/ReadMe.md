@@ -2,7 +2,7 @@
 This library enables class serialization to a zip file.
 The class is serialized with the ExtendedXmlSerializer and the resources within the class (ZipResource) are stored as separate files within the zip file.
 
-# How to design a Zip serializable class
+# How to design a Zip serializable class with the ZipResource class
 ```csharp
     [XmlClass] // Marks this class as serializable (ExtendedXmlSerializer)
     public class ImageModel {
@@ -30,6 +30,26 @@ or
 _model.MainImage.Data = byteArrayOfResource;
 ```
 
+# How to design a Zip serializable class with byte[]
+```csharp
+    [XmlClass] // Marks this class as serializable (ExtendedXmlSerializer)
+    public class ImageModel {
+        List<byte[]> _images = new List<byte[]>();
+        [XmlArray("Images")]
+        [XmlArrayItem("Image")]
+        public List<byte[]> Images { get => _images; set => _images = value; } // A list of resources
+
+        private byte[] _mainImage;
+        [XmlAttribute]
+        public byte[] MainImage { get => _mainImage; set => _mainImage=value; } // A resource can be an attribute!
+    }
+
+```
+To fill the resource with data, just set the property with 
+```csharp
+_model.MainImage = byteArrayOfResource;
+```
+
 # How to serialize to a Zip file
 
 ```csharp
@@ -46,6 +66,8 @@ _model.MainImage.Data = byteArrayOfResource;
     var deserialized = zipSerializer.Deserialize(strm);
 
 ```
+# Prevent serialization of byte[] to zip
+If you want to store the type byte[] regularly as base64 within the xml file and only store properties of the type ZipResource to the zip file, you can use the parameter 'byteArrayAsZipEntry' when calling Serialize() and Deserialize()
 
 # Compression and performance
 You can optimize the serializer in two ways:

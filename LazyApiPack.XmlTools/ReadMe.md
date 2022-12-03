@@ -23,7 +23,7 @@ If you dont want to include the whole namespace in the xml, you can suppress the
 var model = new SimpleDataModel();
 
 new ExtendedXmlSerializer<SimpleDataModel>()
-	.Serialize(model, "[PathToFile]");
+    .Serialize(model, "[PathToFile]");
 
 ```
 
@@ -73,8 +73,8 @@ will be serialized to this xml:
 
 ```xml
 <serializedObject firstAttribute="value" secondAttribute="value">
-	<firstElement>value</firstElement>
-	<secondElement>value</secondElement>
+    <firstElement>value</firstElement>
+    <secondElement>value</secondElement>
 </serializedObject>
 ```
 
@@ -186,30 +186,36 @@ To extend the XmlSerializer, you can create a class that implements the IExernal
 ### Example
 ```csharp
 public class WindowsThicknessSerializer : IExternalObjectSerializer {
-	public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string dateTimeFormat, bool enableRecursiveSerialization) {
-		if (value == null) {
-			writer.WriteValue(null);
-		} else {
-			var thk = (Thickness)value;
-			writer.WriteValue($"{thk.Left},{thk.Top},{thk.Right},{thk.Bottom}");
-		}
-		return true;
-	}
+    public bool Serialize(XmlWriter writer, object? value, 
+                          bool serializeAsAttribute, IFormatProvider format, 
+                          string? dateTimeFormat, bool enableRecursiveSerialization, 
+                          out string? dataFormat) {
+        dataFormat = null;
+        if (value == null) {
+            writer.WriteValue(null);
+        } else {
+            var thk = (Thickness)value;
+            writer.WriteValue($"{thk.Left},{thk.Top},{thk.Right},{thk.Bottom}");
+        }
+        return true;
+    }
 
-	public object? Deserialize(string? value, Type type, IFormatProvider format, string dateTimeFormat, bool enableRecursiveSerialization) {
-		if (string.IsNullOrWhiteSpace(value)) return default(Thickness);
+    public object? public object? Deserialize(XElement node, Type type, IFormatProvider format, 
+                                              string? dateTimeFormat, bool enableRecursiveSerialization, 
+                                              string? dataFormat) {
+        if (string.IsNullOrWhiteSpace(node.Value)) return default(Thickness);
 
-		var s = value.Split(",");
-		if (s.Length == 4 && double.TryParse(s[0], out var l) && double.TryParse(s[0], out var t)&& double.TryParse(s[0], out var r)&& double.TryParse(s[0], out var b)) {
-			return new Thickness(l, t, r, b);
-		} else {
-			throw new InvalidCastException($"Cannot convert {value} to {typeof(Thickness).FullName}.");
-		}
-	}
+        var s = node.Value.Split(",");
+        if (s.Length == 4 && double.TryParse(s[0], out var l) && double.TryParse(s[0], out var t)&& double.TryParse(s[0], out var r)&& double.TryParse(s[0], out var b)) {
+            return new Thickness(l, t, r, b);
+        } else {
+            throw new InvalidCastException($"Cannot convert {node.Value} to {typeof(Thickness).FullName}.");
+        }
+    }
 
-	public bool SupportsType(Type type) {
-		return type == typeof(Thickness);
-	}
+    public bool SupportsType(Type type) {
+        return type == typeof(Thickness);
+    }
 
 }
 ```
@@ -220,6 +226,50 @@ var serializer = new ExtendedXmlSerializer<SimpleDataModel>();
 serializer.ExternalSerializers.Add(new WindowsThicknessSerializer());
 
 ```
+## Overriding default behavior of the ExtendedXmlSerializer
+If you don't want to serialize certain data types the way the ExtendedXmlSerializer serializes it (eg. byte[] is stored as base64 text in the xml),
+you can create an IExternalXmlSerializer, that supports a known type (eg. byte[]) and a custom dataFormat.
+
+### Example
+```csharp
+// Adds support for the known type byte[]
+// dataFormat is NULL when the object is being serialized.
+// dataFormat is whatever you set it during your custom serialization
+// Be careful! the dataFormat is not always how you've set it if for example the ExtendedXmlSerializer or a different ExternalXmlSerializer has serialized the object.
+public bool SupportsType(Type type, string? dataFormat) {
+    return type.IsAssignableTo(typeof(byte[])) && (dataFormat == null || dataFormat == "zipResource");
+}
+
+// Serializes the object
+public bool Serialize(XmlWriter writer, object? value, 
+                        bool serializeAsAttribute, IFormatProvider format, 
+                        string? dateTimeFormat, bool enableRecursiveSerialization, Action<string> setDataFormat) {
+    string id;
+    if (value is byte[] ba) { // if the value is the supported type, serialize it
+        id = _resourceManager.AddResource(ba); // Serialization logic
+        setDataFormat(ZIP_RESOURCE_DATA_FORMAT_NAME); // make sure, you set the dataFormat BEFORE you write anything to the writer!
+    } else {
+        return false; // Serialization is not supported or failed for whatever reason (The serializer will abort the serialization).
+    }
+
+    writer.WriteValue(id); // Write the actual value to the xml (see topic before).
+    return true; // Serialization was successful.
+}
+
+// Deserializes the object
+public object? Deserialize(XElement objectNode, Type type, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization, string? dataFormat) {
+    if (node.Value == null) return null;
+    if (type == typeof(byte[]) && dataFormat == "zipResource") { // datatype is supported, also the dataFormat as specified in the Serialize method
+        return _resourceManager.GetResource(node.Value); // the actual deserialization.
+    } else {
+        // If type is not deserializable (this is only interesting, if the serializer supports multiple types and dataFormats and it needs a way to fail properly in case 
+        // the SupportedType method and Serialize / Deserialize methods are not properly implemented).
+        throw new NotSupportedException($"Type {type.FullName} with data format {dataFormat} is not supported by {nameof(ZipResourceSerializer)}.{nameof(Deserialize)}.");
+    }
+}
+
+```
+
 
 ## Create multiple extensions
 To create multiple extensions, I recommend using a class extension for the ExtendedXmlSerializer.
@@ -227,18 +277,17 @@ To create multiple extensions, I recommend using a class extension for the Exten
 Example:
 ```csharp
 public static class WpfExtendedXmlSerializer {
-	/// <summary>
-	/// Adds support for Wpf specific types.
-	/// </summary>
-	/// <typeparam name="TClass">Class Type of the serializer target object.</typeparam>
-	/// <param name="serializer">The serializer that uses the extensions.</param>
-	public static ExtendedXmlSerializer<TClass> UseWpfTypeSupport
-		<TClass>(this ExtendedXmlSerializer<TClass> serializer) where TClass : class {
-		serializer.ExternalSerializers.Add(new WindowsPointSerializer());
-		serializer.ExternalSerializers.Add(new WindowsThicknessSerializer());
-		return serializer;
-	}
-
+    /// <summary>
+    /// Adds support for Wpf specific types.
+    /// </summary>
+    /// <typeparam name="TClass">Class Type of the serializer target object.</typeparam>
+    /// <param name="serializer">The serializer that uses the extensions.</param>
+    public static ExtendedXmlSerializer<TClass> UseWpfTypeSupport
+        <TClass>(this ExtendedXmlSerializer<TClass> serializer) where TClass : class {
+        serializer.ExternalSerializers.Add(new WindowsPointSerializer());
+        serializer.ExternalSerializers.Add(new WindowsThicknessSerializer());
+        return serializer;
+    }
 }
 ```
 
@@ -246,8 +295,8 @@ Usage:
 
 ```csharp
 new ExtendedXmlSerializer<SimpleDataModel>()
-	.UseWpfTypeSupport()
-	.Serialize(model, "[PathToFile]");
+    .UseWpfTypeSupport()
+    .Serialize(model, "[PathToFile]");
 	
 ```
 
@@ -261,42 +310,40 @@ Example:
 ```csharp
 [XmlClass("myClass")]
 public class MyClass {
-	[XmlProperty("value")] // The new property can not have the same name as the new property!
-	[Obsolete] // Note: the System.Obsolete does not change the xml serializer behavior!
-	public string OldValue { get; set; }
+    [XmlProperty("value")] // The new property can not have the same name as the new property!
+    [Obsolete] // Note: the System.Obsolete does not change the xml serializer behavior!
+    public string OldValue { get; set; }
 
-	[XmlProperty("intValue")] // The new property needs a new name!
-	public int Value { get; set; }
-	
+    [XmlProperty("intValue")] // The new property needs a new name!
+    public int Value { get; set; }
 }
 ```
 The migration process could look like that:
 ```csharp
  private bool Serializer_MigrateXmlDocument(ExtendedXmlSerializer<MyClass> sender, 
-											string? xmlAppName, 
-											string? currentAppName, 
-											Version xmlAppVersion, 
-											Version currentAppVersion, 
-											XDocument document) {
+                                            string? xmlAppName, 
+                                            string? currentAppName, 
+                                            Version xmlAppVersion, 
+                                            Version currentAppVersion, 
+                                            XDocument document) {
     if (xmlAppVersion >= new Version(1,2,3,4)) {
-		var cls = document
-					.Element("ExtendedSerializedObjectFile")
-					?.Element("myClass");
-			if (cls != null) {
-				var value = cls.Element("value").Value;
-				if (int.TryParse(value, NumberStyles.Number,
-										sender.CultureInfo, // optional
-										out var intValue)) {
-					cls.Add(new XElement("intValue", intValue); // add the new value to the xml
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				// Not the correct xml.
-				return false;
-			}
-	}
+        var cls = document.Element("ExtendedSerializedObjectFile")
+                         ?.Element("myClass");
+        if (cls != null) {
+            var value = cls.Element("value").Value;
+            if (int.TryParse(value, NumberStyles.Number, 
+                sender.CultureInfo, // optional
+                out var intValue)) {
+                    cls.Add(new XElement("intValue", intValue); // add the new value to the xml
+                        return true;
+            } else {
+                return false;
+            }
+         } else {
+             // Not the correct xml.
+             return false;
+         }
+    }
 }
 ```
 
@@ -309,14 +356,13 @@ Example of "self-migration":
 ```csharp
 [XmlClass("myClass")]
 public class MyClass {
-	[XmlProperty("value")] // The new property can not have the same name as the new property!
-	[XmlObsolete("Use Value instead.")] // Makes this property Deserialize-Only
-	[Obsolete] // Note: the System.Obsolete does not change the xml serializer behavior!
-	public string OldValue {  set => Value = int.Parse(value); } // Note: This property is write-only!
+    [XmlProperty("value")] // The new property can not have the same name as the new property!
+    [XmlObsolete("Use Value instead.")] // Makes this property Deserialize-Only
+    [Obsolete] // Note: the System.Obsolete does not change the xml serializer behavior!
+    public string OldValue {  set => Value = int.Parse(value); } // Note: This property is write-only!
 
-	[XmlProperty("intValue")] // The new property needs a new name!
-	public int Value { get; set; } // this property can be deserialized or set by OldValue (depending if you use an old xml or a new one)
-	
+    [XmlProperty("intValue")] // The new property needs a new name!
+    public int Value { get; set; } // this property can be deserialized or set by OldValue (depending if you use an old xml or a new one)
 }
 ```
 

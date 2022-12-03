@@ -48,8 +48,11 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
                 Assert.That(currentAppName, Is.EqualTo("App2"), "App name in serializer invalid.");
 
                 var root = doc.Element(XName.Get("ExtendedSerializedObjectFile"));
+                Assert.NotNull(root, "root is null");
                 var simpleModel = root.Element(XName.Get("SimpleModel"));
+                Assert.NotNull(simpleModel, "simpleModel is null");
                 var nameAttribute = simpleModel.Attribute(XName.Get("Name"));
+                Assert.NotNull(nameAttribute, "nameAttribute is null");
                 simpleModel.Add(new XAttribute("Caption", nameAttribute.Value));
                 nameAttribute.Remove();
 

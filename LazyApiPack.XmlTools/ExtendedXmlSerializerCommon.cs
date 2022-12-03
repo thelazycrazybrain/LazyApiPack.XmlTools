@@ -10,13 +10,15 @@ using System.Xml;
 using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools {
-    public partial class ExtendedXmlSerializer<TClass> where TClass : class {
-        public const string LZYNS = "http://www.jodiewatson.net/xml/lzyxmlx/1.0";
+    public partial class ExtendedXmlSerializer<TClass> : ExtendedXmlSerializer where TClass : class {
+
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. _writer is set in Serialize() method
         private ExtendedXmlSerializer() {
             _serializedObjects = new List<SerializableClassInfo>();
             _deserializedObjects = new List<SerializedClassContainer>();
             _cachedTypes = new Dictionary<string, Type>();
         }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
 
         /// <summary>
         /// Creates an instance of the extended xml serializer.
@@ -37,7 +39,11 @@ namespace LazyApiPack.XmlTools {
             EnableRecursiveSerialization = enableRecursiveSerialization;
             CultureInfo = cultureInfo ?? CultureInfo.InvariantCulture;
             DateTimeFormat = dateTimeFormat;
+
+#pragma warning disable CS8601 // Possible null reference assignment. If null is specified, the Getter provides a fallback value
             AppVersion = appVersion;
+#pragma warning restore CS8601 // Possible null reference assignment.
+
             AppName = appName;
             XmlFormatting = xmlFormatting;
             UseFullNamespace = useFullNamespace;
@@ -100,7 +106,6 @@ namespace LazyApiPack.XmlTools {
             get => _appVersion ?? Assembly.GetEntryAssembly()?.GetName().Version ?? throw new NullReferenceException("App version is not specified and can not determined.");
             set => _appVersion = value;
         }
-
         string? _appName;
         /// <summary>
         /// Name of the app or the assembly title of the entry assembly.
@@ -118,16 +123,16 @@ namespace LazyApiPack.XmlTools {
         /// Contains a cache of the classes that have been already serialized (to support xml compression and recursive serialization.
         /// </summary>
         /// <remarks>Is only used when recursive serialization is enabled.</remarks>
-        List<SerializableClassInfo> _serializedObjects;
+        private readonly List<SerializableClassInfo> _serializedObjects;
         /// <summary>
         /// Contains a cache of the classes that have been already deserialized (to support xml compression and recursive serialization.
         /// </summary>
         /// <remarks>Is only used when recursive serialization is enabled.</remarks>
-        List<SerializedClassContainer> _deserializedObjects;
+        private readonly List<SerializedClassContainer> _deserializedObjects;
         /// <summary>
         /// Types, that have already been reflected.
         /// </summary>
-        Dictionary<string, Type> _cachedTypes;
+        private readonly Dictionary<string, Type> _cachedTypes;
         #endregion
 
         #region Helper Functions
@@ -209,8 +214,9 @@ namespace LazyApiPack.XmlTools {
         /// <param name="objectType">Type of the object.</param>
         /// <returns>True, if the Serializer can treat this type as a value type</returns>
         /// <remarks>The serializer considers some reference types and complex types such as Point, DateTime or Version as value types.</remarks>
-        public bool IsValueType(Type objectType) {
+        public bool IsSimpleType(Type objectType) {
             return objectType.IsValueType ||
+                   objectType.IsEnum ||
                    objectType == typeof(string) ||
                    objectType == typeof(Version) ||
                    objectType == typeof(Point) ||

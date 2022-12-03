@@ -1,4 +1,5 @@
-﻿using LazyApiPack.XmlTools.Attributes;
+﻿#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+using LazyApiPack.XmlTools.Attributes;
 using LazyApiPack.XmlTools.Tests.ModelBase;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ using System.Xml.Serialization;
 namespace LazyApiPack.XmlTools.Tests.Model {
     [XmlClass]
     public class ComplexTypesModel : ExtendedXmlSerializableTestBase {
+
         public ComplexTypesModel() {
         }
 
@@ -44,6 +46,7 @@ namespace LazyApiPack.XmlTools.Tests.Model {
 
     [XmlClass]
     public class CarItem : XmlSerializableTestBase, IItem {
+
         private string _name;
         [XmlAttribute("Name")]
         public string Name
@@ -68,3 +71,4 @@ namespace LazyApiPack.XmlTools.Tests.Model {
         string Name { get; set; }
     }
 }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.

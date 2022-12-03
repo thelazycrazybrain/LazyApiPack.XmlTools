@@ -1,7 +1,7 @@
-﻿using LazyApiPack.XmlTools.Helpers;
+﻿using LazyApiPack.XmlTools;
+using LazyApiPack.XmlTools.Helpers;
+using LazyApiPack.XmlTools.Wpf.Serializers;
 using System.CodeDom;
-using System.Windows;
-using System.Xml;
 using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools.Wpf {
@@ -16,66 +16,35 @@ namespace LazyApiPack.XmlTools.Wpf {
         /// <param name="serializer">The serializer that uses the extensions.</param>
         public static ExtendedXmlSerializer<TClass> UseWpfTypeSupport
             <TClass>(this ExtendedXmlSerializer<TClass> serializer) where TClass : class {
-            serializer.ExternalSerializers.Add(new WindowsPointSerializer());
-            serializer.ExternalSerializers.Add(new WindowsThicknessSerializer());
+
+            PointSerializer pointSerializer;
+            serializer.ExternalSerializers.Add(pointSerializer = new PointSerializer());
+            serializer.ExternalSerializers.Add(new PointCollectionSerializer(pointSerializer));
+            serializer.ExternalSerializers.Add(new ThicknessSerializer());
+            ColorSerializer colorSerializer;
+            serializer.ExternalSerializers.Add(colorSerializer = new ColorSerializer());
+            MatrixSerializer matrixSerializer;
+            serializer.ExternalSerializers.Add(matrixSerializer =new MatrixSerializer());
+            TransformSerializer transformSerializer;
+            serializer.ExternalSerializers.Add(transformSerializer = new TransformSerializer(matrixSerializer));
+            RectSerializer rectSerializer;
+            serializer.ExternalSerializers.Add(rectSerializer =new RectSerializer());
+            BitmapImageSerializer bitmapImageSerializer;
+            serializer.ExternalSerializers.Add(bitmapImageSerializer = new BitmapImageSerializer());
+            BrushSerializer brushSerializer;
+            serializer.ExternalSerializers.Add(brushSerializer = 
+                new BrushSerializer(colorSerializer, transformSerializer, rectSerializer, bitmapImageSerializer));
+            serializer.ExternalSerializers.Add(new StrokeCollectionSerializer(colorSerializer, matrixSerializer));
+            serializer.ExternalSerializers.Add(new DrawingAttributesSerializer(colorSerializer, matrixSerializer));
+            serializer.ExternalSerializers.Add(new StylusPointCollectionSerializer());
+            DashStyleSerializer dashStyleSerializer;
+            serializer.ExternalSerializers.Add(dashStyleSerializer = new DashStyleSerializer());
+            PenSerializer penSerializer;
+            serializer.ExternalSerializers.Add(penSerializer = new PenSerializer(dashStyleSerializer, brushSerializer));
+            serializer.ExternalSerializers.Add(new TextDecorationCollectionSerializer(penSerializer));
+
             return serializer;
         }
-
-    }
-
-    /// <summary>
-    /// Adds serialization support for System.Windows.Thickness.
-    /// </summary>
-    public class WindowsThicknessSerializer : IExternalObjectSerializer {
-        public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization) {
-            if (value == null) {
-                writer.WriteValue(null);
-            } else {
-                var thk = (Thickness)value;
-                writer.WriteValue($"{thk.Left},{thk.Top},{thk.Right},{thk.Bottom}");
-            }
-            return true;
-        }
-
-        public object? Deserialize(string? value, Type type, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization) {
-            if (string.IsNullOrWhiteSpace(value)) return default(Thickness);
-
-            var s = value.Split(",");
-            if (s.Length == 4 && double.TryParse(s[0], out var l) && double.TryParse(s[0], out var t)&& double.TryParse(s[0], out var r)&& double.TryParse(s[0], out var b)) {
-                return new Thickness(l, t, r, b);
-            } else {
-                throw new InvalidCastException($"Cannot convert {value} to {typeof(Thickness).FullName}.");
-            }
-        }
-
-        public bool SupportsType(Type type) {
-            return type == typeof(Thickness);
-        }
-
-    }
-
-    /// <summary>
-    /// Adds serialization support for System.Windows.Point.
-    /// </summary>
-    public class WindowsPointSerializer : IExternalObjectSerializer {
-        public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization) {
-            if (value == null) {
-                writer.WriteValue(null);
-            } else {
-                writer.WriteValue(((Point)value).ToString());
-            }
-            return true;
-        }
-
-        public object? Deserialize(string? value, Type type, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization) {
-            if (string.IsNullOrWhiteSpace(value)) return default(Point);
-            return Point.Parse(value);
-        }
-
-        public bool SupportsType(Type type) {
-            return type == typeof(Point);
-        }
-
 
     }
 }

@@ -17,6 +17,18 @@ namespace LazyApiPack.XmlTools.Tests.Model {
             set => SetPropertyValue(ref _name, value);
         }
 
+        private QuestionCatalogScoreMode _scoreMode;
+        [XmlAttribute]
+        public QuestionCatalogScoreMode ScoreMode {
+            get => _scoreMode;
+            set => SetPropertyValue(ref _scoreMode, value);
+        }
+        private QuestionCatalogScoreMode _scoreModeProperty;
+        [XmlProperty]
+        public QuestionCatalogScoreMode ScoreModeProperty {
+            get => _scoreModeProperty;
+            set => SetPropertyValue(ref _scoreModeProperty, value);
+        }
         private DateTime _lastLearned;
         [XmlAttribute]
         public DateTime LastLearned
@@ -32,6 +44,14 @@ namespace LazyApiPack.XmlTools.Tests.Model {
             get => _questions;
             set => SetPropertyValue(ref _questions, value);
         }
+
+    }
+    [Flags]
+    public enum QuestionCatalogScoreMode : int {
+        Default = 0,
+        WrongAnswerGivesNegativePoints = 1,
+        MultipleChoiceAnyWrongTickCountsAllWrong = 2,
+        MultipleChoiceMissingTickCountsAllWrong = 4
 
     }
 }

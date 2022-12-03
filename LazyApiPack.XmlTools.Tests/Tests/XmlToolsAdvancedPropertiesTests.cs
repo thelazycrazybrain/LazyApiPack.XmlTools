@@ -1,4 +1,5 @@
-﻿using LazyApiPack.XmlTools.Tests.Model;
+﻿#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+using LazyApiPack.XmlTools.Tests.Model;
 using System.Collections.ObjectModel;
 using System.Text;
 
@@ -125,6 +126,7 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
 
             Assert.That(carItem, Is.EqualTo(sharedCar), "Shared car item is not the same object in array.");
             var modelCar = _model.Array[0].ElementAt(2) as CarItem;
+            Assert.NotNull(modelCar, "modelCar is null.");
             Assert.That(modelCar.Name, Is.EqualTo(carItem.Name), "Car item 2 has changed!");
 
 
@@ -139,3 +141,4 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
 
     }
 }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.

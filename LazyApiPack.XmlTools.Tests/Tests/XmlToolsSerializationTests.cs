@@ -2,18 +2,20 @@ using LazyApiPack.XmlTools.Tests.Model;
 using System.Drawing;
 using System.Globalization;
 using System.Reflection;
+using System.Text;
 using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools.Tests.Tests {
     public class XmlToolsSerializationTests {
-
-
         QuestionCatalog _model;
         DateTime _checkDateTime;
         [SetUp]
         public void Setup() {
             _model = new QuestionCatalog() {
                 Name = "Question Catalog 1",
+                ScoreMode = QuestionCatalogScoreMode.WrongAnswerGivesNegativePoints |
+                QuestionCatalogScoreMode.MultipleChoiceAnyWrongTickCountsAllWrong,
+                ScoreModeProperty = QuestionCatalogScoreMode.WrongAnswerGivesNegativePoints | QuestionCatalogScoreMode.MultipleChoiceMissingTickCountsAllWrong,
                 LastLearned = _checkDateTime = DateTime.Now
             };
 
@@ -143,7 +145,9 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
             Assert.NotNull(stream, "Returned stream is null.");
             Assert.NotZero(stream.Length, "Stream is empty");
             Assert.Zero(stream.Position);
+            //var str = ValidationHelper.GetXml(stream, Encoding.UTF8);
             var doc = ValidationHelper.GetXDoc(stream);
+
             ValidateHeader(doc);
             ValidateDateTime(doc, ci, null);
 
@@ -212,10 +216,18 @@ namespace LazyApiPack.XmlTools.Tests.Tests {
             Assert.That(deserialized.Sets?.Count, Is.EqualTo(original.Sets?.Count),
                 $"Source set count = {original.Sets?.Count.ToString() ?? "NULL"} while Target set count = {deserialized.Sets?.Count.ToString() ?? "NULL"}.");
 
+            
             Assert.NotNull(deserialized.Sets, "Deserialized sets are null.");
             Assert.NotNull(original.Sets, "Source sets are null.");
             Assert.That(deserialized.Sets.First().Name, Is.EqualTo(original.Sets.First().Name), "Name of the first set does not match the first set of the deserialized object.");
 
+            Assert.True((int)deserialized.ScoreMode ==
+                (int)(QuestionCatalogScoreMode.WrongAnswerGivesNegativePoints |
+                     QuestionCatalogScoreMode.MultipleChoiceAnyWrongTickCountsAllWrong), "Flag for ScoreMode not correct.");
+
+            Assert.True((int)deserialized.ScoreModeProperty ==
+    (int)(QuestionCatalogScoreMode.WrongAnswerGivesNegativePoints |
+         QuestionCatalogScoreMode.MultipleChoiceMissingTickCountsAllWrong), "Flag for ScoreModeProperty not correct.");
             if (deserialized.Sets.First().Questions[2] is PictureQuestion dq1 && original.Sets[0].Questions[2] is PictureQuestion sq1) {
                 CollectionAssert.AreEqual(sq1.ImageData, dq1.ImageData, new BinaryComparer(), "Image (2) is not identical.");
             } else {

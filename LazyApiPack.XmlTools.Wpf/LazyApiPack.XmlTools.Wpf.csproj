@@ -10,15 +10,33 @@
 		<Description>Adds support for WPF data types to the Extended Xml serializer </Description>
 		<Authors>Jodie Watson</Authors>
 		<Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
-		<AssemblyVersion>0.1.4</AssemblyVersion>
+		<AssemblyVersion>0.1.6</AssemblyVersion>
 		<PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
-		<FileVersion>0.1.4</FileVersion>
+		<FileVersion>0.1.6</FileVersion>
 		<Version>$(AssemblyVersion)</Version>
 		<PackageProjectUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools</PackageProjectUrl>
 		<PackageReadmeFile>ReadMe.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools.git</RepositoryUrl>
 		<PackageTags>xml;serializer;deserializer;recursive;nested;tool;wpf</PackageTags>
-		<PackageReleaseNotes>Includes support for point and thickness classes (More are coming).</PackageReleaseNotes>
+		<PackageReleaseNotes>Added support for:
+PointCollection,
+Brush,
+Color,
+StrokeCollection,
+Thickness,
+BitmapImage,
+Rect
+DrawingAttributes
+StylusPointCollection,
+TextDecoration,
+Pen,
+DashStyle,
+MatrixTransform,
+RotateTransform,
+ScaleTransform,
+SkewTransform,
+TranslateTransform
+		</PackageReleaseNotes>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 
 	</PropertyGroup>
@@ -28,7 +46,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="ReadMe.md" Pack="True" PackagePath="\"/>
+		<None Update="ReadMe.md" Pack="True" PackagePath="\" />
 	</ItemGroup>
 
 </Project>

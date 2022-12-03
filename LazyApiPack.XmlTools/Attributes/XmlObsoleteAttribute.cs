@@ -21,6 +21,6 @@
         /// <summary>
         /// The reason why this property is obsolete.
         /// </summary>
-        public string Reason { get; set; }
+        public string? Reason { get; set; }
     }
 }

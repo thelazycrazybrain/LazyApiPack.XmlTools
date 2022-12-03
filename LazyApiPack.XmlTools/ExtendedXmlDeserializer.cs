@@ -7,12 +7,13 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Numerics;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools {
-    public partial class ExtendedXmlSerializer<TClass> where TClass : class {
+    public partial class ExtendedXmlSerializer<TClass>  where TClass : class  {
         /// <summary>
         /// Is raised if the file version does not match the given app version.
         /// </summary>
@@ -32,9 +33,8 @@ namespace LazyApiPack.XmlTools {
         /// <exception cref="FileNotFoundException"></exception>
         public TClass Deserialize(string file, bool checkAppCompatibility = false) {
             if (!File.Exists(file)) throw new FileNotFoundException($"The specified file ({file}) does not exist");
-            using (var fs = File.OpenRead(file)) {
-                return Deserialize(fs, checkAppCompatibility);
-            }
+            using var fs = File.OpenRead(file);
+            return Deserialize(fs, checkAppCompatibility);
         }
 
         private XElement LoadXml([NotNull] Stream sourceStream, bool checkAppCompatibility) {
@@ -88,8 +88,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
 
                 return (TClass)DeserializeClass(rootNode, typeof(TClass));
 
-            }
-            finally {
+            } finally {
                 ClearSerializationCache();
                 if (sourceStream.CanSeek) {
                     sourceStream.Position = pos;
@@ -108,14 +107,13 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
             try {
                 var root = LoadXml(sourceStream, checkAppCompatibility);
                 var rootNodes = root.Nodes().OfType<XElement>().Skip(1);
-                List<TClass> result = new List<TClass>();
+                List<TClass> result = new();
                 foreach (var rootNode in rootNodes) {
                     result.Add((TClass)DeserializeClass(rootNode, typeof(TClass)));
                 }
                 return result;
 
-            }
-            finally {
+            } finally {
                 ClearSerializationCache();
                 if (sourceStream.CanSeek) {
                     sourceStream.Position = pos;
@@ -142,22 +140,24 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
             if (EnableRecursiveSerialization) {
                 id = objectNode.Attribute(XName.Get("objId", LZYNS))?.Value
                     ?? throw new NullReferenceException($"Id of {objectType.FullName} can not be null because recursive serialization is enabled.");
-
+                var deserializedClass = _deserializedObjects.FirstOrDefault(c => c.Type == objectType.FullName && c.Id == id);
+                if (deserializedClass != null) return deserializedClass.Object;
             }
 
-            var deserializedClass = _deserializedObjects.FirstOrDefault(c => c.Type == objectType.FullName && c.Id == id);
-            if (deserializedClass != null) return deserializedClass.Object;
-
             var instance = Activator.CreateInstance(objectType) ?? throw new NullReferenceException($"Can not create instance of {objectType.FullName}.");
+
             if (EnableRecursiveSerialization) {
                 _deserializedObjects.Add(new SerializedClassContainer(id, objectType.FullName ?? objectType.Name, instance));
 
                 // Set Key Property
                 var keyProperty = objectType.GetProperties().FirstOrDefault(p => p.GetCustomAttribute<XmlClassKeyAttribute>() != null);
                 if (keyProperty != null) {
+#pragma warning disable CS8604 // Possible null reference argument. Id is checked above.
                     if (!SerializationHelper.TryDeserializeValueType(keyProperty.PropertyType, id, out var key, CultureInfo, DateTimeFormat)) {
                         throw new ExtendedXmlSerializationException("Cannot deserialize key property.");
                     } else {
+#pragma warning restore CS8604 // Possible null reference argument.
+
                         keyProperty.SetValue(instance, key);
                     }
                 }
@@ -170,10 +170,10 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
                 foreach (var xatt in objectNode.Attributes().Where(a => string.IsNullOrWhiteSpace(a.Name.Namespace.NamespaceName))) {
                     var simpleProperty = ci.Properties.FirstOrDefault(p => p.PropertyName == xatt.Name);
                     if (simpleProperty != null) {
-                        if (SerializationHelper.TryDeserializeValueType(simpleProperty.PropertyInfo.PropertyType, xatt.Value, out object value, CultureInfo, DateTimeFormat)) {
-                            simpleProperty.PropertyInfo.SetValue(instance, value);
-                        } else if (TryDeserializePropertyExternal(xatt.Value, simpleProperty.PropertyType, out var deserialized)) {
+                        if (TryDeserializePropertyExternal(new XElement(xatt.Name, xatt.Value), simpleProperty.PropertyType, null, out var deserialized)) {
                             simpleProperty.PropertyInfo.SetValue(instance, deserialized);
+                        } else if (SerializationHelper.TryDeserializeValueType(simpleProperty.PropertyInfo.PropertyType, xatt.Value, out object? value, CultureInfo, DateTimeFormat)) {
+                            simpleProperty.PropertyInfo.SetValue(instance, value);
                         } else {
                             throw new ExtendedXmlSerializationException($"Property {xatt.Value} can not be deserialized, because it is not a simple type.");
                         }
@@ -203,6 +203,11 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
             return instance;
         }
 
+        /// <summary>
+        /// Gets the type from an xml element
+        /// </summary>
+        /// <param name="objectNode">The current xml element</param>
+        /// <returns>The (full) name of the type that is represented by this xml node.</returns>
         private string? GetTypeFromAttribute([NotNull] XElement objectNode) {
             return objectNode.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", LZYNS))?.Value;
         }
@@ -216,21 +221,19 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
         /// <returns></returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
         private object? DeserializeProperty(XElement objectNode, Type objectType, object? createdOnConstruction) {
-            if (objectType.IsArray) {
+
+            if (TryDeserializePropertyExternal(objectNode, objectType, objectNode.Attribute(XName.Get("format", LZYNS))?.Value, out var deserialized)) {
+                return deserialized;
+            } else if (objectType.IsArray) {
                 return DeserializeArray(objectNode, objectType, createdOnConstruction);
             } else if (objectType.IsGenericType) {
                 return DeserializeGeneric(objectNode, objectType, createdOnConstruction);
-            } else if (objectType.IsEnum) {
-                return DeserializeEnum(objectNode, objectType);
-            } else if (IsValueType(objectType)) {
-                return DeserializeValueType(objectNode, objectType);
+            } else if (IsSimpleType(objectType)) {
+                return DeserializeSimpleType(objectNode, objectType);
+            } else if (TryDeserializeClass(objectNode, objectType, out object? complex)) {
+                return complex;
             } else {
-                if (TryDeserializeComplexClass(objectNode, objectType, out object? complex)) {
-                    return complex;
-                } else {
-                    throw new ExtendedXmlSerializationException("The type {type.FullName} could not be deserialized and there were no events overloaded to deserialize it.");
-                }
-
+                throw new ExtendedXmlSerializationException($"The type {objectType.FullName} could not be deserialized and there were no events overloaded to deserialize it.");
             }
         }
 
@@ -246,19 +249,6 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
             } else {
                 return Convert.FromBase64String(b64);
             }
-        }
-
-        /// <summary>
-        /// Deserializes an enum
-        /// </summary>
-        /// <param name="objectNode">The xml node representing the object.</param>
-        /// <param name="objectType">The type of the enum.</param>
-        /// <returns>The deserialized enum or the default value.</returns>
-        private object DeserializeEnum(XElement objectNode, Type objectType) {
-            if (string.IsNullOrWhiteSpace(objectNode.Value))
-                return Activator.CreateInstance(objectType) ?? throw new NullReferenceException($"Can not create instance of {objectType.FullName}.");
-            return Enum.Parse(objectType, objectNode.Value);
-
         }
 
         /// <summary>
@@ -280,7 +270,7 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
                 }
             }
             Array array;
-            if (rank.Contains(";")) {
+            if (rank.Contains(';')) {
                 // Multidimensional
                 var lenghtsStr = rank.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
                 var lengths = lenghtsStr.Select(s => int.Parse(s)).ToArray();
@@ -334,9 +324,6 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
                 typeof(ICollection<>).IsAssignableFrom(typedef)) {
                 return DeserializeList(objectNode, objectType, typeargs[0], createdOnConstruction);
             } else {
-                if (TryDeserializePropertyExternal(objectNode.Value, objectType, out var deserialized)) {
-                    return deserialized;
-                }
                 throw new ExtendedXmlSerializationException($"The generic type {typedef.FullName} is not supported.");
             }
         }
@@ -359,7 +346,9 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
                 var key = DeserializeProperty(keyElement, keyType, createdOnConstruction);
                 var valueElement = item.Element(XName.Get("Value")) ?? throw new ExtendedXmlSerializationException("Could not find Value element in xml.");
                 var value = DeserializeProperty(valueElement, valueType, createdOnConstruction);
+#pragma warning disable CS8604 // Possible null reference argument. Dictionary might support one null key here.
                 dictionary.Add(key, value);
+#pragma warning restore CS8604 // Possible null reference argument.
             }
             return dictionary;
         }
@@ -387,18 +376,16 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
                 }
                 return Activator.CreateInstance(listType, tempList) ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {listType.FullName}."); ;
             } else {
-                var list = createdOnConstruction as IList;
-                if (list == null) {
+                if (createdOnConstruction is not IList list) {
                     if (listType.IsGenericType || listType.IsAbstract || listType.IsInterface) {
-                        var strType = GetTypeFromAttribute(objectNode);
+                        var strType = GetTypeFromAttribute(objectNode) ?? throw new ExtendedXmlSerializationException($"clsType attribute was not found or is empty for {listType.FullName}. Generic, abstract and interface types need the clsType attribute set.");
                         var type = GetCachedType(strType, null);
-                        list  = Activator.CreateInstance(type) as IList;
+                        list  = Activator.CreateInstance(type) as IList ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {listType.FullName}.");
                     } else {
-
                         list = Activator.CreateInstance(listType) as IList ?? throw new ExtendedXmlSerializationException($"Could not create an instance of {listType.FullName}.");
                     }
+
                 }
-                // TODO: CreatedOnConstruction is not of type IList
 
                 foreach (var element in objectNode.Elements().ToList()) {
                     var attType = element.Attributes().FirstOrDefault(a => a.Name == XName.Get("clsType", LZYNS));
@@ -420,28 +407,22 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
         /// <param name="objectType">The type of the value type.</param>
         /// <returns>The deserialized value.</returns>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private object? DeserializeValueType(XElement objectNode, Type objectType) {
+        private object? DeserializeSimpleType(XElement objectNode, Type objectType) {
             if (SerializationHelper.TryDeserializeValueType(objectType, objectNode.Value, out object? value, CultureInfo, DateTimeFormat)) {
-                return value;
-            }
-
-            // Enums with datatype "int" etc.
-            if (TryDeserializeComplexClass(objectNode, objectType, out value)) {
                 return value;
             } else {
                 throw new ExtendedXmlSerializationException("Cannot deserialize value.");
             }
-
         }
 
         /// <summary>
-        /// Deserializes a class.
+        /// Checks if the property type is markt as a serializable class and serializes it.
         /// </summary>
         /// <param name="objectNode">The xml node representing the object.</param>
         /// <param name="objectType">The type of the class.</param>
         /// <param name="deserialized">The object that has been deserialized.</param>
-        /// <returns>True, if the class could be deserialized. Otherwise false.</returns>
-        private bool TryDeserializeComplexClass(XElement objectNode, Type objectType, out object? deserialized) {
+        /// <returns>True, if the property contains a serializable class.</returns>
+        private bool TryDeserializeClass(XElement objectNode, Type objectType, out object? deserialized) {
             var attType = GetTypeFromAttribute(objectNode);
 
             if (attType != null) {
@@ -451,24 +432,24 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
             if (att != null) {
                 deserialized = DeserializeClass(objectNode, objectType);
                 return true;
-            } else {
-                return TryDeserializePropertyExternal(objectNode.Value, objectType, out deserialized);
-
             }
+            deserialized = null;
+            return false;
 
         }
 
         /// <summary>
         /// Deserializes a value that is not known to the serializer but to an IExternalObjectSerializer
         /// </summary>
-        /// <param name="value">The xml node representing the object.</param>
+        /// <param name="node">The xml node containing the object.</param>
         /// <param name="objectType">The type of the class.</param>
+        /// <param name="dataFormat">Specifies a format in which the data is stored.</param>
         /// <param name="deserialized">The object that has been deserialized.</param>
         /// <returns>True, if the class could be deserialized or false, if the deserialization failed or no suitable extension was found.</returns>
-        private bool TryDeserializePropertyExternal(string value, Type objectType, out object? deserialized) {
-            var deserializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(objectType));
+        private bool TryDeserializePropertyExternal(XElement node, Type objectType, string? dataFormat, out object? deserialized) {
+            var deserializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(objectType, dataFormat));
             if (deserializer != null) {
-                deserialized = deserializer.Deserialize(value, objectType, CultureInfo, DateTimeFormat, EnableRecursiveSerialization);
+                deserialized = deserializer.Deserialize(node, objectType, CultureInfo, DateTimeFormat, EnableRecursiveSerialization, dataFormat);
                 return true;
             } else {
                 deserialized = null;

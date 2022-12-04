@@ -59,7 +59,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
                 pen.LineJoin = (PenLineJoin)Enum.Parse(typeof(PenLineJoin), lineJoinValue);
             }
 
-            var miterLimitValue = node.Attribute(XName.Get("PenLineJoin"))?.Value;
+            var miterLimitValue = node.Attribute(XName.Get("MiterLimit"))?.Value;
             if (miterLimitValue != null) {
                 pen.MiterLimit = double.Parse(miterLimitValue, format);
             }

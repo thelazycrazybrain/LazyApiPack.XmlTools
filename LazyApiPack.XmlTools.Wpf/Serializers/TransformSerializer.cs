@@ -50,7 +50,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
         }
 
         public bool SupportsType(Type type, string? dataFormat) {
-            return type.IsAssignableTo(typeof(RotateTransform));
+            return type.IsAssignableTo(typeof(Transform));
         }
 
 

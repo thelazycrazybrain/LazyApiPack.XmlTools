@@ -144,6 +144,7 @@ namespace LazyApiPack.XmlTools {
             if (EnableRecursiveSerialization) {
                 _writer.WriteAttributeString("objId", LZYNS, classInfo.Id);
             }
+
             if (includeObjectNamespace) {
                 SetTypeAttribute(classInfo.ClassType, writeAttributeToCurrentElement);
 
@@ -195,7 +196,7 @@ namespace LazyApiPack.XmlTools {
                                        bool includeObjectNamespace, Action? writeAttributeToCurrentElement) {
             if (value == null) return; // Do not serialize null values
 
-            if (SerializePropertyExternal(value, propertyInfo.IsXmlAttribute, propertyName, value.GetType())) {
+            if (SerializePropertyExternal(value, propertyInfo.IsXmlAttribute, propertyName, value.GetType(), includeObjectNamespace)) {
                 return;
             }
 
@@ -216,7 +217,7 @@ namespace LazyApiPack.XmlTools {
                 if (propCi.SerializableClassAttribute != null) {
                     SerializeClass(propCi, !IsExactType(propCi.ClassType, value) || includeObjectNamespace, propertyName);
                 } else {
-                    throw new ExtendedXmlSerializationException($"There is not serializer that supports the type {propertyType.FullName} to serialize the value {value}");
+                    throw new ExtendedXmlSerializationException($"There is no serializer that supports the type {propertyType.FullName} to serialize the value {value}");
                 }
             }
 
@@ -392,7 +393,7 @@ namespace LazyApiPack.XmlTools {
         /// <param name="propertyName">Name of the property.</param>
         /// <param name="propertyType">The type of the property.</param>
         /// <exception cref="ExtendedXmlSerializationException"></exception>
-        private bool SerializePropertyExternal(object value, bool serializeAsAttribute, string propertyName, Type propertyType) {
+        private bool SerializePropertyExternal(object value, bool serializeAsAttribute, string propertyName, Type propertyType, bool includeObjectNamespace) {
             var externalSerializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(propertyType, null));
             if (externalSerializer == null) {
                 return false;
@@ -402,6 +403,11 @@ namespace LazyApiPack.XmlTools {
                 _writer.WriteStartAttribute(propertyName);
             } else {
                 _writer.WriteStartElement(propertyName);
+
+                if (includeObjectNamespace) {
+                    SetTypeAttribute(propertyType, null);
+
+                }
             }
 
             if (!externalSerializer.Serialize(_writer, value, serializeAsAttribute, CultureInfo, DateTimeFormat,

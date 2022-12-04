@@ -12,25 +12,26 @@ namespace LazyApiPack.XmlTools.Wpf.Tests.Tests {
         [SetUp]
         public void Setup() {
             _model = new WpfModel() {
-                Matrix  =new Matrix(),
-                BitmapImage = new BitmapImage(),
-                Brush = new RadialGradientBrush(),
-                Color = Color.FromArgb(255, 123, 42, 15),
-                DashStyle = new DashStyle(),
-                DrawingAttributes = new DrawingAttributes(),
-                MatrixTransform = new MatrixTransform(),
-                Pen = new Pen(),
-                PointCollection = new PointCollection(),
-                Rect = new System.Windows.Rect(),
-                RotateTransform = new RotateTransform(),
-                ScaleTransform = new ScaleTransform(),
-                SkewTransform = new SkewTransform(),
-                StrokeCollection  = new StrokeCollection(),
-                StylusPointCollection = new StylusPointCollection(),
-                TextDecorationCollection = new TextDecorationCollection(),
-                Thickness = new Thickness(),
-                TranslateTransform = new TranslateTransform(),
-                Point = new Point()
+                MatrixProperty = new Matrix(),
+                BitmapImageProperty = new BitmapImage(),
+                BrushProperty = new RadialGradientBrush(),
+                ColorProperty = Color.FromArgb(255, 123, 42, 15),
+                DashStyleProperty = new DashStyle(),
+                DrawingAttributesProperty = new DrawingAttributes(),
+                MatrixTransformProperty = new MatrixTransform(),
+                PenProperty = new Pen(),
+                PointCollectionProperty = new PointCollection(),
+                RectProperty = new Rect(),
+                RotateTransformProperty = new RotateTransform(),
+                ScaleTransformProperty = new ScaleTransform(),
+                SkewTransformProperty = new SkewTransform(),
+                StrokeCollectionProperty = new StrokeCollection(),
+                StylusPointCollectionProperty = new StylusPointCollection(),
+                TextDecorationCollectionProperty = new TextDecorationCollection(),
+                ThicknessProperty = new Thickness(),
+                TranslateTransformProperty = new TranslateTransform(),
+                PointProperty = new Point(1,1),
+                StrokeCollectionInterfaceProperty = new StrokeCollectionEx()
             };
         }
 
@@ -42,7 +43,7 @@ namespace LazyApiPack.XmlTools.Wpf.Tests.Tests {
 
             var data = ValidationHelper.GetData(strm);
 
-            var deserialized = serializer.Deserialize(strm);
+            var deserialized = serializer.Deserialize(strm, false);
         }
     }
 }

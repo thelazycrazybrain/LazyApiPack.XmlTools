@@ -17,7 +17,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
         }
         /// <inheritdoc/>
         public object? Deserialize(XElement node, Type type, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization, string? dataFormat) {
-            var coll = new StrokeCollection();
+            var coll = Activator.CreateInstance(type) as StrokeCollection;
             var elements = node.Element(XName.Get("StrokeCollection"));
             if (elements != null) {
                 foreach (var strokeElement in elements.Elements()) {
@@ -82,7 +82,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
         public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization, Action<string> setDataFormat) {
             if (value == null) return true;
             if (value is StrokeCollection collection) {
-                writer.WriteStartElement("StrikeCollection");
+                writer.WriteStartElement("StrokeCollection");
                 foreach (Stroke stroke in collection) {
                     writer.WriteStartElement("Stroke");
                     writer.WriteAttributeString("FitToCurve", stroke.DrawingAttributes.FitToCurve.ToString(format));
@@ -121,7 +121,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
 
         /// <inheritdoc/>
         public bool SupportsType(Type type, string? dataFormat) {
-            return type == typeof(StrokeCollection);
+            return type.IsAssignableTo(typeof(StrokeCollection));
         }
 
     }

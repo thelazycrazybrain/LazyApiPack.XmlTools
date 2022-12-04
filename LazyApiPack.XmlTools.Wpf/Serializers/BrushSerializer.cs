@@ -28,7 +28,8 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
 
         /// <inheritdoc />
         public object? Deserialize(XElement node, Type type, IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization, string? dataFormat) {
-            var brushType = node.Attribute(XName.Get("Type"))?.Value;
+            var brushType = node.Attribute(XName.Get("BrushType"))?.Value;
+            if (brushType == null) return null;
             switch (brushType) {
                 case "SolidColorBrush":
                     return DeserializeSolidColorBrush(node, format, dateTimeFormat, enableRecursiveSerialization, dataFormat);
@@ -185,7 +186,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
         }
 
         public void SerializeLinearGradientBrush(XmlWriter writer, LinearGradientBrush lgb, IFormatProvider format) {
-            writer.WriteAttributeString("Type", "LinearGradientBrush");
+            writer.WriteAttributeString("BrushType", "LinearGradientBrush");
             writer.WriteStartElement("StartPoint");
             writer.WriteAttributeString("X", lgb.StartPoint.X.ToString(format));
             writer.WriteAttributeString("Y", lgb.StartPoint.Y.ToString(format));
@@ -235,7 +236,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
         }
 
         public void SerializeRadialGradientBrush(XmlWriter writer, RadialGradientBrush rgb, IFormatProvider format) {
-            writer.WriteAttributeString("Type", "RadialGradientBrush");
+            writer.WriteAttributeString("BrushType", "RadialGradientBrush");
             writer.WriteAttributeString("RadX", rgb.RadiusX.ToString(format));
             writer.WriteAttributeString("RadY", rgb.RadiusY.ToString(format));
             writer.WriteAttributeString("GOriginX", rgb.GradientOrigin.X.ToString(format));
@@ -275,7 +276,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
             };
         }
         public void SerializeSolidColorBrush(XmlWriter writer, SolidColorBrush scb, IFormatProvider format) {
-            writer.WriteAttributeString("Type", "SolidColorBrush");
+            writer.WriteAttributeString("BrushType", "SolidColorBrush");
             writer.WriteAttributeString("A", scb.Color.A.ToString(format));
             writer.WriteAttributeString("R", scb.Color.R.ToString(format));
             writer.WriteAttributeString("G", scb.Color.G.ToString(format));

@@ -226,6 +226,57 @@ var serializer = new ExtendedXmlSerializer<SimpleDataModel>();
 serializer.ExternalSerializers.Add(new WindowsThicknessSerializer());
 
 ```
+
+## Creating an ExtendedXmlSerializer that supports derived, abstract and interface types
+If you want to support types, that are interfaces, abstract types or derived types, you can change your extension as follows:
+
+```csharp
+// The SupportsType function should not check a direct match, but should check, if the type is assignable
+public bool SupportsType(Type type, string? dataFormat) {
+    return type.IsAssignableTo(typeof(StrokeCollection)); // .NET 5 and above
+    return typeof(StrokeCollection).IsAssignableTo(type); // Prior to .NET 5
+}
+
+// If you support derived types, take those types into consideration here.
+public bool Serialize(XmlWriter writer, object? value, bool serializeAsAttribute, 
+                       IFormatProvider format, string? dateTimeFormat, bool enableRecursiveSerialization, 
+                       Action<string> setDataFormat) {
+    if (value == null) return true;
+    // NOTE: value is compatible with StrokeCollection (See SupportsType) so the check here passes, 
+    // however, value might be a more specific type at this point
+    // since we only check for the type compatibility in SupportsType rather than checking for an exact type.
+    if(value is StrokeCollection collection) {
+        // Serialize your class as default
+    }
+
+    if (value is SpecialStrokeCollection specialCollection) {
+        // If you want to handle special cases, just cast it to known types you want to support.
+        // Serialize your class as SpecialStrokeCollection
+    }
+}
+
+// IMPORTANT: Deserialization needs special attention!
+public object? Deserialize(XElement node, Type type, IFormatProvider format, 
+                           string? dateTimeFormat, bool enableRecursiveSerialization, string? dataFormat) {
+    // IMPORTANT: You can not create StrokeCollection with new because it might be a derived type.
+    var collection = Activator.CreateInstance(type) as StrokeCollection; // Create a specialized class with 
+                                                                         // the Activator and cast it to a class that is compatible
+                                                                         // and you can handle.
+    // you can check the created type for special derived types you want to support
+    
+    // NOTE: Deserialize your class here and treat it literally as a normal StrokeCollection
+    collection.Strokes.Add(...);
+
+    // If you support derived types that you know, you can cast the object to 
+    // a special class and set additional properties.
+    if (collection is SpecialStrokeCollection specialCollection) {
+        collection.StrokeDecorations.Add(...);
+    }
+    if(collection is IncredibleSpecialStrokeCollection incredibleSpecialCollection) {
+        collection.StrokeEffects.Add(...);
+    }
+}
+```
 ## Overriding default behavior of the ExtendedXmlSerializer
 If you don't want to serialize certain data types the way the ExtendedXmlSerializer serializes it (eg. byte[] is stored as base64 text in the xml),
 you can create an IExternalXmlSerializer, that supports a known type (eg. byte[]) and a custom dataFormat.

@@ -15,83 +15,94 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace LazyApiPack.XmlTools.Wpf.Tests.Model {
+    public interface IStrokeCollection : ICollection<Stroke> {
+
+    }
+
+    public class StrokeCollectionEx : StrokeCollection, IStrokeCollection {
+
+    }
     [XmlClass]
     public class WpfModel : XmlSerializableTestBase {
        
-        PointCollection _pointCollection;
+        PointCollection _pointCollectionProperty;
         [XmlProperty]
-        public PointCollection PointCollection { get => _pointCollection; set => SetPropertyValue(ref _pointCollection, value); }
+        public PointCollection PointCollectionProperty { get => _pointCollectionProperty; set => SetPropertyValue(ref _pointCollectionProperty, value); }
 
-        private Point _point;
+        private IStrokeCollection _strokeCollectionInterfaceProperty;
         [XmlProperty]
-        public Point Point { get => _point; set => SetPropertyValue(ref _point, value); }
+        public IStrokeCollection StrokeCollectionInterfaceProperty { get => _strokeCollectionInterfaceProperty; set => SetPropertyValue(ref _strokeCollectionInterfaceProperty, value); }
 
-        private Thickness _thickness;
+        private Point _pointProperty;
         [XmlProperty]
-        public Thickness Thickness { get => _thickness; set => SetPropertyValue(ref _thickness, value); }
+        public Point PointProperty { get => _pointProperty; set => SetPropertyValue(ref _pointProperty, value); }
 
-        private Brush _brush;
+        private Thickness _thicknessProperty;
         [XmlProperty]
-        public Brush Brush { get => _brush; set => SetPropertyValue(ref _brush, value); }
+        public Thickness ThicknessProperty { get => _thicknessProperty; set => SetPropertyValue(ref _thicknessProperty, value); }
 
-        private Color _color;
+        private Brush _brushProperty;
         [XmlProperty]
-        public Color Color { get => _color; set => SetPropertyValue(ref _color, value); }
+        public Brush BrushProperty { get => _brushProperty; set => SetPropertyValue(ref _brushProperty, value); }
 
-        private StrokeCollection _strokeCollection;
+        private Color _colorProperty;
         [XmlProperty]
-        public StrokeCollection StrokeCollection { get => _strokeCollection; set => SetPropertyValue(ref _strokeCollection, value); }
+        public Color ColorProperty { get => _colorProperty; set => SetPropertyValue(ref _colorProperty, value); }
 
-        private BitmapImage _bitmapImage;
+        private StrokeCollection _strokeCollectionProperty;
         [XmlProperty]
-        public BitmapImage BitmapImage { get => _bitmapImage; set => SetPropertyValue(ref _bitmapImage, value); }
+        public StrokeCollection StrokeCollectionProperty { get => _strokeCollectionProperty; set => SetPropertyValue(ref _strokeCollectionProperty, value); }
 
-        private Rect _rect;
+        private BitmapImage _bitmapImageProperty;
         [XmlProperty]
-        public Rect Rect { get => _rect; set => SetPropertyValue(ref _rect, value); }
+        public BitmapImage BitmapImageProperty { get => _bitmapImageProperty; set => SetPropertyValue(ref _bitmapImageProperty, value); }
 
-        private Matrix _matrix;
+        private Rect _rectProperty;
         [XmlProperty]
-        public Matrix Matrix { get => _matrix; set => SetPropertyValue(ref _matrix, value); }
+        public Rect RectProperty { get => _rectProperty; set => SetPropertyValue(ref _rectProperty, value); }
 
-        private DrawingAttributes _drawingAttributes;
+        private Matrix _matrixProperty;
         [XmlProperty]
-        public DrawingAttributes DrawingAttributes { get => _drawingAttributes; set => SetPropertyValue(ref _drawingAttributes, value); }
+        public Matrix MatrixProperty { get => _matrixProperty; set => SetPropertyValue(ref _matrixProperty, value); }
 
-        private StylusPointCollection _stylusPointCollection;
+        private DrawingAttributes _drawingAttributesProperty;
         [XmlProperty]
-        public StylusPointCollection StylusPointCollection { get => _stylusPointCollection; set => SetPropertyValue(ref _stylusPointCollection, value); }
+        public DrawingAttributes DrawingAttributesProperty { get => _drawingAttributesProperty; set => SetPropertyValue(ref _drawingAttributesProperty, value); }
 
-        private TextDecorationCollection _textDecorationCollection;
+        private StylusPointCollection _stylusPointCollectionProperty;
         [XmlProperty]
-        public TextDecorationCollection TextDecorationCollection { get => _textDecorationCollection; set => SetPropertyValue(ref _textDecorationCollection, value); }
+        public StylusPointCollection StylusPointCollectionProperty { get => _stylusPointCollectionProperty; set => SetPropertyValue(ref _stylusPointCollectionProperty, value); }
 
-        private Pen _pen;
+        private TextDecorationCollection _textDecorationCollectionProperty;
         [XmlProperty]
-        public Pen Pen { get => _pen; set => SetPropertyValue(ref _pen, value); }
+        public TextDecorationCollection TextDecorationCollectionProperty { get => _textDecorationCollectionProperty; set => SetPropertyValue(ref _textDecorationCollectionProperty, value); }
 
-        private DashStyle _dashStyle;
+        private Pen _penProperty;
         [XmlProperty]
-        public DashStyle DashStyle { get => _dashStyle; set => SetPropertyValue(ref _dashStyle, value); }
+        public Pen PenProperty { get => _penProperty; set => SetPropertyValue(ref _penProperty, value); }
 
-        private MatrixTransform _matrixTransform;
+        private DashStyle _dashStyleProperty;
         [XmlProperty]
-        public MatrixTransform MatrixTransform { get => _matrixTransform; set => SetPropertyValue(ref _matrixTransform, value); }
+        public DashStyle DashStyleProperty { get => _dashStyleProperty; set => SetPropertyValue(ref _dashStyleProperty, value); }
 
-        private RotateTransform _rotateTransform;
+        private MatrixTransform _matrixTransformProperty;
         [XmlProperty]
-        public RotateTransform RotateTransform { get => _rotateTransform; set => SetPropertyValue(ref _rotateTransform, value); }
+        public MatrixTransform MatrixTransformProperty { get => _matrixTransformProperty; set => SetPropertyValue(ref _matrixTransformProperty, value); }
 
-        private ScaleTransform _scaleTransform;
+        private RotateTransform _rotateTransformProperty;
         [XmlProperty]
-        public ScaleTransform ScaleTransform { get => _scaleTransform; set => SetPropertyValue(ref _scaleTransform, value); }
+        public RotateTransform RotateTransformProperty { get => _rotateTransformProperty; set => SetPropertyValue(ref _rotateTransformProperty, value); }
 
-        private SkewTransform _skewTransform;
+        private ScaleTransform _scaleTransformProperty;
         [XmlProperty]
-        public SkewTransform SkewTransform { get => _skewTransform; set => SetPropertyValue(ref _skewTransform, value); }
+        public ScaleTransform ScaleTransformProperty { get => _scaleTransformProperty; set => SetPropertyValue(ref _scaleTransformProperty, value); }
 
-        private TranslateTransform _translateTransform;
+        private SkewTransform _skewTransformProperty;
         [XmlProperty]
-        public TranslateTransform TranslateTransform { get => _translateTransform; set => SetPropertyValue(ref _translateTransform, value); }
+        public SkewTransform SkewTransformProperty { get => _skewTransformProperty; set => SetPropertyValue(ref _skewTransformProperty, value); }
+
+        private TranslateTransform _translateTransformProperty;
+        [XmlProperty]
+        public TranslateTransform TranslateTransformProperty { get => _translateTransformProperty; set => SetPropertyValue(ref _translateTransformProperty, value); }
     }
 }

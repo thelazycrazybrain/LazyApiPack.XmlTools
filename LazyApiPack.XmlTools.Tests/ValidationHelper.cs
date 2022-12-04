@@ -37,7 +37,9 @@ namespace LazyApiPack.XmlTools.Tests {
 
         public static byte[] GetData(Stream strm) {
             var buffer = new byte[strm.Length];
+            var lastPos = strm.Position;
             strm.Read(buffer, 0, buffer.Length);
+            strm.Position = lastPos;
             return buffer;
         }
     }

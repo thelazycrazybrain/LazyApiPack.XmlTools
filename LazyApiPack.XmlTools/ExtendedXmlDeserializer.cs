@@ -13,7 +13,7 @@ using System.Xml;
 using System.Xml.Linq;
 
 namespace LazyApiPack.XmlTools {
-    public partial class ExtendedXmlSerializer<TClass>  where TClass : class  {
+    public partial class ExtendedXmlSerializer<TClass> where TClass : class {
         /// <summary>
         /// Is raised if the file version does not match the given app version.
         /// </summary>
@@ -447,6 +447,13 @@ Either the xml version {header.AppVersion} does not match the app version {AppVe
         /// <param name="deserialized">The object that has been deserialized.</param>
         /// <returns>True, if the class could be deserialized or false, if the deserialization failed or no suitable extension was found.</returns>
         private bool TryDeserializePropertyExternal(XElement node, Type objectType, string? dataFormat, out object? deserialized) {
+            var overriddenTypeName = GetTypeFromAttribute(node);
+            if (overriddenTypeName != null) {
+                var overriddenType = GetCachedType(overriddenTypeName, objectType.Namespace);
+                if (overriddenType != null) {
+                    objectType = overriddenType;
+                }
+            }
             var deserializer = ExternalSerializers.FirstOrDefault(d => d.SupportsType(objectType, dataFormat));
             if (deserializer != null) {
                 deserialized = deserializer.Deserialize(node, objectType, CultureInfo, DateTimeFormat, EnableRecursiveSerialization, dataFormat);

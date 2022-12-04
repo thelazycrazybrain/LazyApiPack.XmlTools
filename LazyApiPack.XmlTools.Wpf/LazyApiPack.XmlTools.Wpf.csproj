@@ -26,7 +26,7 @@ ScaleTransform,
 SkewTransform,
 TranslateTransform</Description>
 		<Authors>Jodie Watson</Authors>
-		<Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
+		<Copyright>Copyright (c) 2022-2023 Jodie Watson</Copyright>
 		<AssemblyVersion>0.1.7</AssemblyVersion>
 		<PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
 		<FileVersion>0.1.7</FileVersion>

@@ -8,7 +8,7 @@
 	  <Title>The Lazy Crazy Brain Api Pack - Xml Tools - ZIP</Title>
 	  <Description>Provides an easy way to serialize classes to xml that use resources like BitmapImages, Streams and byte arrays.</Description>
 	  <Authors>Jodie Watson</Authors>
-	  <Copyright>Copyright (c) 2022 Jodie Watson</Copyright>
+	  <Copyright>Copyright (c) 2022-2023 Jodie Watson</Copyright>
 	  <PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
 	  <AssemblyVersion>0.1.7</AssemblyVersion>
 	  <FileVersion>0.1.7</FileVersion>

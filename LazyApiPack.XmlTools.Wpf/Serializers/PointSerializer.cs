@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Globalization;
+using System.Windows;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -12,7 +13,7 @@ namespace LazyApiPack.XmlTools.Wpf.Serializers {
             if (value == null) {
                 writer.WriteValue(null);
             } else {
-                writer.WriteValue(((Point)value).ToString());
+                writer.WriteValue(((Point)value).ToString(CultureInfo.InvariantCulture));
             }
             return true;
         }

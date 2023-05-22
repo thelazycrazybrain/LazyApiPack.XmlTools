@@ -1,49 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-		<TargetFramework>net6.0-windows</TargetFramework>
-		<UseWPF>true</UseWPF>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-		<Title>The Lazy Crazy Brain Api Pack - Xml Tools WPF</Title>
-		<Description>Adds support for WPF data types to the Extended Xml serializer including:
-PointCollection,
-Brush,
-Color,
-StrokeCollection,
-Thickness,
-BitmapImage,
-Rect
-DrawingAttributes
-StylusPointCollection,
-TextDecoration,
-Pen,
-DashStyle,
-MatrixTransform,
-RotateTransform,
-ScaleTransform,
-SkewTransform,
-TranslateTransform</Description>
-		<Authors>Jodie Watson</Authors>
-		<Copyright>Copyright (c) 2022-2023 Jodie Watson</Copyright>
-		<AssemblyVersion>0.1.7</AssemblyVersion>
-		<PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
-		<FileVersion>0.1.7</FileVersion>
-		<Version>$(AssemblyVersion)</Version>
-		<PackageProjectUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools</PackageProjectUrl>
-		<PackageReadmeFile>ReadMe.md</PackageReadmeFile>
-		<RepositoryUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools.git</RepositoryUrl>
-		<PackageTags>xml;serializer;deserializer;recursive;nested;tool;wpf</PackageTags>
-		<PackageReleaseNotes>Bugfixes</PackageReleaseNotes>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-	</PropertyGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\LazyApiPack.XmlTools\LazyApiPack.XmlTools.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="ReadMe.md" Pack="True" PackagePath="\" />
-	</ItemGroup>
-
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>The Lazy Crazy Brain Api Pack - Xml Tools WPF</Title>
+    <Description>Bugfisx: Point Serializer works now with different cultures. (Point.Parse does not support cultureInof)fi)o)s</Description>
+    <Authors>Jodie Watson</Authors>
+    <Copyright>Copyright (c) 2022-2023 Jodie Watson</Copyright>
+    <AssemblyVersion>0.1.7.1</AssemblyVersion>
+    <PackageOutputPath>C:\LocalNugets\LazyApiPack\$(OutputPath)</PackageOutputPath>
+    <FileVersion>0.1.7.1</FileVersion>
+    <Version>$(AssemblyVersion)</Version>
+    <PackageProjectUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools</PackageProjectUrl>
+    <PackageReadmeFile>ReadMe.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/thelazycrazybrain/LazyApiPack.XmlTools.git</RepositoryUrl>
+    <PackageTags>xml;serializer;deserializer;recursive;nested;tool;wpf</PackageTags>
+    <PackageReleaseNotes>Bugfixes</PackageReleaseNotes>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LazyApiPack.XmlTools" Version="0.1.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="ReadMe.md" Pack="True" PackagePath="\" />
+  </ItemGroup>
 </Project>

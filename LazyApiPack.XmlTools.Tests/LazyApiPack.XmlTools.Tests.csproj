@@ -1,29 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
   <ItemGroup>
-
     <None Remove="Resources\obsolete.xml" />
-
     <None Remove="Resources\Sample1.jpg" />
     <None Remove="Resources\Sample2.jpg" />
     <None Remove="Resources\Sample3.jpg" />
     <None Remove="Resources\Sample4.jpg" />
   </ItemGroup>
-
   <ItemGroup>
     <Resource Include="Resources\obsolete.xml">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
   </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource Include="Resources\obsolete.xml" />
     <EmbeddedResource Include="Resources\Sample1.jpg" />
@@ -31,7 +25,6 @@
     <EmbeddedResource Include="Resources\Sample3.jpg" />
     <EmbeddedResource Include="Resources\Sample4.jpg" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
     <PackageReference Include="NUnit" Version="3.13.3" />
@@ -39,9 +32,7 @@
     <PackageReference Include="NUnit.Analyzers" Version="3.3.0" />
     <PackageReference Include="coverlet.collector" Version="3.1.2" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\LazyApiPack.XmlTools\LazyApiPack.XmlTools.csproj" />
   </ItemGroup>
-
 </Project>

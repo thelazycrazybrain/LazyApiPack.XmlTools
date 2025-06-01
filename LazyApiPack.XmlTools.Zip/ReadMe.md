@@ -1,4 +1,6 @@
 ﻿# About this project
+If this package helps you, please consider buying me a coffee https://ko-fi.com/thelazycrazybrain
+
 This library enables class serialization to a zip file.
 The class is serialized with the ExtendedXmlSerializer and the resources within the class (ZipResource) are stored as separate files within the zip file.
 

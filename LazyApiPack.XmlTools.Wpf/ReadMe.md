@@ -1,4 +1,6 @@
 # About this project
+If this package helps you, please consider buying me a coffee https://ko-fi.com/thelazycrazybrain
+
 This library provides support for WPF specific type serialization.
 
 # How to serialize with WPF support

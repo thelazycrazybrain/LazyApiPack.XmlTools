@@ -1,4 +1,6 @@
 # About this project
+If this package helps you, please consider buying me a coffee https://ko-fi.com/thelazycrazybrain
+
 This Serializer is designed to make xml serialization easier with excessive type support.
 It can serialize properties with abstract or interface types, generics etc.
 The serializer also supports recursive object serialization. If an object has already been serialized, the element value in the xml is only a reference to the object serialized in the document above.
